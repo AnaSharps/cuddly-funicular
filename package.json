@@ -1,15 +1,27 @@
 {
-  "name": "aatm-nirbhar-bharat",
-  "version": "1.0.0",
-  "description": "A platform to help employees/employers find their livelihood during this trying times",
-  "main": "index.js",
+  "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "eject": "expo eject"
   },
-  "repository": {
-    "type": "git",
-    "url": "Aatm Nirbhar Bharat"
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "expo": "~38.0.8",
+    "expo-status-bar": "^1.0.2",
+    "express": "^4.17.1",
+    "express-session": "^1.17.1",
+    "mysql": "^2.18.1",
+    "react": "~16.11.0",
+    "react-dom": "~16.11.0",
+    "react-native": "https://github.com/expo/react-native/archive/sdk-38.0.2.tar.gz",
+    "react-native-web": "~0.11.7"
   },
-  "author": "Prashansa Dadu",
-  "license": "ISC"
+  "devDependencies": {
+    "@babel/core": "^7.8.6",
+    "babel-preset-expo": "~8.1.0"
+  },
+  "private": true
 }
