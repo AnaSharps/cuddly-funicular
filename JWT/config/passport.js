@@ -14,11 +14,14 @@ const options = {
 };
 
 const strategy = (connection) => (new JwtStrategy(options, (payload, done) => {
+  console.log('passport authenticating');
   connection.query(`SELECT * FROM user_accounts WHERE username='${payload.sub}'`, (err, user) => {
     if (err) {
+      console.log('passport encountered error');
       return done(err, false);
     }
     if (user) {
+      console.log('passport recognized user');
       return done(null, user[0]);
     }
     return done(null, false);

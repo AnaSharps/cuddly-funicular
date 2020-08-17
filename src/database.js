@@ -8,7 +8,7 @@ const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: 'root',
-  database: 'anb_database'
+  database: 'final_anb',
 });
 
 require('../JWT/config/passport')(passport, connection);
@@ -18,7 +18,7 @@ const app = express();
 app.use(passport.initialize());
 
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 app.use(cors());
 
