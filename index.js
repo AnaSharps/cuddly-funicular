@@ -11,7 +11,7 @@ import { ScreenContainer } from 'react-native-screens';
 
 export const WelcomeLogin = ({ route, navigation }) => {
   const { error } = route.params;
-  let username = null;
+  let email = null;
   let password = null;
   let mobile = null;
   return (
@@ -19,8 +19,7 @@ export const WelcomeLogin = ({ route, navigation }) => {
       {error && (
         <Text>{error}</Text>
       )}
-      <Text>Login With Email</Text>
-      <TextInput placeholder="Email-Id" keyboardType="email-address" onChangeText={(e) => { username = e; }} />
+      <TextInput placeholder="Email-Id" keyboardType="email-address" onChangeText={(e) => { email = e; }} />
       <TextInput placeholder="Password" secureTextEntry onChangeText={(e) => { password = e; }} />
       <Button
         title="Submit"
@@ -32,7 +31,7 @@ export const WelcomeLogin = ({ route, navigation }) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              username,
+              email,
               password,
             }),
           }).then((res) => res.json()).then((json) => {
@@ -54,78 +53,7 @@ export const WelcomeLogin = ({ route, navigation }) => {
           });
         }}
       />
-      <Text>------------------------------</Text>
-      <Text>OR</Text>
-      <Text>------------------------------</Text>
-      <Text>Login With Mobile NUmber</Text>
-      <TextInput placeholder="Mobile NUmber" keyboardType="phone-pad" maxLength={10} onChangeText={(e) => { mobile = e; }} />
-      <TextInput placeholder="Password" secureTextEntry onChangeText={(e) => { password = e; }} />
-      <Button
-        title="Submit"
-        onPress={() => {
-          fetch('https://90b07c9dffef.ngrok.io/users/login', {
-            method: 'POST',
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              mobile,
-              password,
-            }),
-          }).then((res) => res.json()).then((json) => {
-            if (json.success) {
-              const authToken = JSON.stringify(json);
-              SecureStore.setItemAsync('authToken', authToken);
-              navigation.navigate('LoggedIn', {
-                user: json.user,
-                userType: json.userType,
-                details: json.details,
-                token: json.token,
-                createVacancy: null,
-              });
-            } else {
-              navigation.navigate('WelcomeLogin', {
-                error: json.msg,
-              });
-            }
-          });
-        }}
-      />
       <Button title="Register" onPress={() => navigation.navigate('Register', { error: null })} />
-    </ScreenContainer>
-  );
-};
-
-export const ViewVacancies = ({ route, navigation }) => {
-  const { user, token } = route.params;
-  let success;
-  let vacId;
-  return (
-    <ScreenContainer>
-      {() => {
-        fetch('https://90b07c9dffef.ngrok.io/users/protected', {
-          method: 'GET',
-          headers: {
-            Authorization: token,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user,
-          }),
-        }).then((res) => res.json()).then((json) => {
-          if (json.success) {
-            vacId = json.vacId.split(':');
-            for (let i = 0; i < vacId.length; i += 1) {
-              <Button title="" />;
-            }
-          }
-        }, () => {
-          SecureStore.deleteItemAsync('authToken');
-          success = false;
-        });
-      }}
     </ScreenContainer>
   );
 };

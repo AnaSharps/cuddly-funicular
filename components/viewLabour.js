@@ -12,7 +12,6 @@ export default class ViewMe extends React.Component {
     const {
       user, userType, token, village, city, state, skills,
     } = route.params;
-    const { success } = { ...this.state };
     return (
       <ScreenContainer>
         <Text>Hello</Text>

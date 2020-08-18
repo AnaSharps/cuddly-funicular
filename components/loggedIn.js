@@ -116,21 +116,14 @@ export default class LoggedIn extends React.Component {
                 }),
               }).then((res) => res.json()).then((json) => {
                 if (json.success) {
-                  const jdArr = json.vacObj.map((val) => (val.job_desc));
-                  const vacNameArr = json.vacObj.map((val) => (val.vac_name));
-                  const vacancyArr = json.vacObj.map((val) => (val.vacancy));
-                  const villageArr = json.vacObj.map((val) => (val.village));
-                  const cityArr = json.vacObj.map((val) => (val.city));
-                  const stateArr = json.vacObj.map((val) => (val.state));
                   navigation.navigate('ShowJobs', {
-                    jdArr, vacNameArr, vacObj: json.vacObj, vacancyArr, villageArr, cityArr, stateArr, skillArr: json.skillArr,
+                    vacanciesFound: json.vacancyDetails, user, token, error: null,
                   });
                 }
               }, () => {
                 SecureStore.deleteItemAsync('authToken');
                 navigation.navigate('WelcomeLogin', { error: 'Unauthorized User' });
               });
-              navigation.navigate('ShowJobs', { user, token });
             }}
           />
           <Button
