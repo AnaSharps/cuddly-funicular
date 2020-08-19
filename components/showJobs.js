@@ -24,7 +24,7 @@ export default class ShowJobs extends React.Component {
   componentDidMount() {
     const { route, navigation } = { ...this.props };
     const { token, user } = route.params;
-    fetch('https://19485340cb67.ngrok.io/users/viewJobsLabour', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/viewJobsLabour', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -50,7 +50,7 @@ export default class ShowJobs extends React.Component {
   applyForJob(vacancyId) {
     const { route, navigation } = { ...this.props };
     const { token, user } = route.params;
-    fetch('https://19485340cb67.ngrok.io/users/applyforJob', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/applyforJob', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -80,7 +80,7 @@ export default class ShowJobs extends React.Component {
   withdrawApplicationHandler(vacancyId) {
     const { route, navigation } = { ...this.props };
     const { token, user } = route.params;
-    fetch('https://19485340cb67.ngrok.io/users/withdrawJob', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/withdrawJob', {
       method: 'POST',
       headers: {
         Authorization: token,

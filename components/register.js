@@ -28,7 +28,7 @@ export default class Register extends React.Component {
     const {
       username, password, mobile, userType, email,
     } = { ...this.state };
-    fetch('https://19485340cb67.ngrok.io/users/register', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/register', {
       method: 'POST',
       headers: {
         Accept: 'application/json',

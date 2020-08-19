@@ -16,7 +16,7 @@ export default class LabourLoggedIn extends React.Component {
       useState: '',
       userSkills: [''],
       skillNum: [uuid.v4()],
-      searchHappened: false,
+      searchHappened: 0,
       searchInput: '',
       locationInput: '',
       companyInput: '',
@@ -35,7 +35,7 @@ export default class LabourLoggedIn extends React.Component {
     const {
       userSkills, userVillage, userCity, userState, vacancy, jobDesc, jobName,
     } = { ...this.state };
-    fetch('https://19485340cb67.ngrok.io/users/protected', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/protected', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -74,7 +74,8 @@ export default class LabourLoggedIn extends React.Component {
       user, userType, token,
     } = route.params;
     const { searchInput, locationInput, companyInput } = { ...this.state };
-    fetch('https://19485340cb67.ngrok.io/users/searchVacancy', {
+    this.setState({ searchHappened: 1 });
+    fetch('https://976e3fc59bb0.ngrok.io/users/searchVacancy', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -82,15 +83,17 @@ export default class LabourLoggedIn extends React.Component {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        user,
         skills: searchInput,
         location: locationInput,
         company: companyInput,
       }),
     }).then((res) => res.json()).then((json) => {
-      this.setState({ searchHappened: true });
+      this.setState({ searchHappened: 2 });
       if (json.success) {
         this.setState({ searchResults: json.results });
       } else {
+        this.setState({ searchResults: [] });
         navigation.navigate('LabourLoggedIn', {
           user, userType, details: null, token, userDetails: null, skillList: null, error: json.msg,
         });
@@ -134,21 +137,44 @@ export default class LabourLoggedIn extends React.Component {
             this.searchHandler();
           }}
         />
-        {searchHappened && !searchResults[0] && (
+        {searchHappened === 1 && (
+          <Text>Retrieving vacancies...</Text>
+        )}
+        {searchHappened === 2 && !searchResults[0] && (
           <Text>No matching vacancies found</Text>
         )}
-        {searchHappened && searchResults[0] && searchResults.map((val) => (
-          <View key={val.vac_id}>
-            <Text>{val.vac_name}</Text>
-            <Button
-              title="Email"
-              onPress={() => {
-                Linking.openURL(`mailto:${val.user_email}`);
-              }}
-            />
-          </View>
-        ))}
-        {details !== 0 && (
+        {searchHappened === 2 && searchResults[0] && searchResults.map((val) => {
+          const {
+            job_desc, vacancy, vac_name, village, city, state, skills, vac_id, user_email,
+          } = val;
+          return (
+            <View key={vac_id}>
+              <Text>
+                {job_desc}
+                ,
+                {' '}
+                {vacancy}
+                ,
+                {' '}
+                {vac_name}
+                ,
+                {' '}
+                {village}
+                ,
+                {' '}
+                {city}
+                ,
+                {' '}
+                {state}
+                ,
+                {' '}
+                {skills.join(', ')}
+              </Text>
+              <Button title="Email" onPress={() => Linking.openURL(`mailto:${user_email}`)} />
+            </View>
+          );
+        })}
+        {!searchHappened && details !== 0 && (
         <>
           <Text>Welcome</Text>
           <Text> Look for your eligible jobs below! </Text>
@@ -177,7 +203,7 @@ export default class LabourLoggedIn extends React.Component {
           />
         </>
         )}
-        {details === 0 && (
+        {!searchHappened && details === 0 && (
         <>
           {userDetails && skillList && (
           <Text>You can Edit the following details!</Text>

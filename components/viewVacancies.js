@@ -22,7 +22,7 @@ export default class ViewVacancies extends React.Component {
   componentDidMount() {
     const { route, navigation } = { ...this.props };
     const { user, token } = route.params;
-    fetch('https://19485340cb67.ngrok.io/users/viewVacancies', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/viewVacancies', {
       method: 'POST',
       headers: {
         Authorization: token,

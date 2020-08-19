@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenContainer } from 'react-native-screens';
-import uuid from 'react-native-uuid';
 
 export default class ViewApplicants extends React.Component {
   constructor(props) {
@@ -16,15 +15,13 @@ export default class ViewApplicants extends React.Component {
     this.state = {
       loading: true,
       applications: [],
-      applicationsNum: [],
-      applicationsFound: null,
     };
   }
 
   componentDidMount() {
     const { route, navigation } = { ...this.props };
     const { user, token, vacancyId } = route.params;
-    fetch('https://19485340cb67.ngrok.io/users/viewApplications', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/viewApplications', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -37,13 +34,9 @@ export default class ViewApplicants extends React.Component {
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {
-        const appNum = json.applications.map(() => uuid.v4());
-        if (json.applications.length === 0) this.setState({ loading: false, applicationsFound: false });
-        else {
-          this.setState({
-            loading: false, applicationsFound: true, applications: json.applications, applicationsNum: appNum,
-          });
-        }
+        this.setState({
+          loading: false, applicationsFound: true, applications: json.applications,
+        });
       } else {
         navigation.navigate('ViewVacancies', {
           user, token, error: json.msg,
@@ -59,18 +52,15 @@ export default class ViewApplicants extends React.Component {
     const { route, navigation } = { ...this.props };
     const { user, token } = route.params;
     const {
-      loading, applications, applicationsNum, applicationsFound,
+      loading, applications,
     } = { ...this.state };
     return (
       <ScreenContainer>
         {loading && (
           <Text> Retrieving Applications...</Text>
         )}
-        {!loading && !applicationsFound && (
-          <Text>No applications found for this vacancy</Text>
-        )}
-        {!loading && applicationsFound && applications.map((val, ind) => (
-          <View key={applicationsNum[ind]}>
+        {!loading && applications.map((val) => (
+          <View key={val.applicant_email}>
             <Text>
               {val.applicant}
               ,

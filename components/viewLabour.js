@@ -24,7 +24,7 @@ export default class ViewMe extends React.Component {
     const {
       user, userType, token,
     } = route.params;
-    fetch('https://19485340cb67.ngrok.io/users/viewLabour', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/viewLabour', {
       method: 'POST',
       headers: {
         Authorization: token,

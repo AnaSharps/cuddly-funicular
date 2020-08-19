@@ -18,10 +18,19 @@ module.exports = (dbConnection) => {
   router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     if (req.body.user && req.body.vacancyId) {
-      dbConnection.query('SELECT vac_id FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacId) => {
+      dbConnection.query('SELECT DISTINCT vac_id FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacId) => {
         if (err) next(err);
         if (vacId.length > 0) {
-          if (vacId[0].vac_id === req.body.vacancyId) {
+          console.log('vacancies found');
+          console.log(vacId[0]);
+          const valid = () => {
+            for (let i = 0; i < vacId.length; i += 1) {
+              if (vacId[i].vac_id === req.body.vacancyId) return true;
+            }
+            return false;
+          };
+          if (valid) {
+            console.log('vacancy valid');
             dbConnection.query('SELECT * FROM vac_applications WHERE vac_id = ?', [req.body.vacancyId], (err2, applications) => {
               if (err2) next(err2);
               if (applications) {
@@ -169,49 +178,158 @@ module.exports = (dbConnection) => {
 
   router.post('/searchVacancy', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (req.body.skills || req.body.location || req.body.company) {
-      const sql = `SELECT DISTINCT vac_details.user_email, vac_details.vac_id, vac_details.vac_name FROM vac_details JOIN vac_skills ON vac_details.vac_id = vac_skills.vac_id WHERE ${req.body.skills === '' ? '' : 'vac_skills.skills = ?'} ${req.body.skills && req.body.location ? 'AND' : ''} ${!req.body.location ? '' : '(vac_details.village = ? OR vac_details.city = ? OR vac_details.state = ?)'} ${(req.body.skills || req.body.location) && req.body.company ? 'AND' : ''} ${req.body.company ? 'vac_details.vac_name = ?' : ''}`;
-      const searchArr = [];
-      if (req.body.skills) searchArr.push(req.body.skills);
-      if (req.body.location) {
-        searchArr.push(req.body.location);
-        searchArr.push(req.body.location);
-        searchArr.push(req.body.location);
-      }
-      if (req.body.company) searchArr.push(req.body.company);
-      dbConnection.query(sql, searchArr, (err, results) => {
-        if (err) next(err);
-        if (results) {
-          console.log(sql);
-          console.log(searchArr);
-          console.log(results);
-          res.status(200).json({ success: true, results, msg: 'Search results found' });
-        }
+    const insertQueries = [];
+    const sId = uuidv4();
+    if (req.body.skills && req.body.location && req.body.company) {
+      const skillArr = req.body.skills.split(', ');
+      const locArr = req.body.location.split(', ');
+      const companyArr = req.body.company.split(', ');
+      skillArr.forEach((skillVal) => {
+        locArr.forEach((locVal) => {
+          companyArr.forEach((compVal) => {
+            const insertQuery = query('INSERT INTO search_lab (searchId, skills, company, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?, ?)', [sId, skillVal, compVal, locVal, locVal, locVal, req.body.user]);
+            insertQueries.push(insertQuery);
+          });
+        });
+      });
+    } else if (req.body.skills && !req.body.location && !req.body.company) {
+      const skillArr = req.body.skills.split(', ');
+      skillArr.forEach((skillVal) => {
+        const insertQuery = query('INSERT INTO search_lab (searchId, skills, user_email) VALUES (?, ?, ?)', [sId, skillVal, req.body.user]);
+        insertQueries.push(insertQuery);
+      });
+    } else if (req.body.location && !req.body.skills && !req.body.company) {
+      const locArr = req.body.location.split(', ');
+      locArr.forEach((locVal) => {
+        const insertQuery = query('INSERT INTO search_lab (searchId, village, city, state, user_email) VALUES (?, ?, ?, ?, ?)', [sId, locVal, locVal, locVal, req.body.user]);
+        insertQueries.push(insertQuery);
+      });
+    } else if (req.body.company && !req.body.skills && !req.body.location) {
+      const compArr = req.body.company.split(', ');
+      compArr.forEach((compVal) => {
+        const insertQuery = query('INSERT INTO search_lab (searchId, company, user_email) VALUES (?, ?, ?, ?, ?)', [sId, compVal, req.body.user]);
+        insertQueries.push(insertQuery);
+      });
+    } else if (req.body.skills && req.body.location && !req.body.company) {
+      const skillArr = req.body.skills.split(', ');
+      const locArr = req.body.location.split(', ');
+      skillArr.forEach((skillVal) => {
+        locArr.forEach((locVal) => {
+          const insertQuery = query('INSERT INTO search_lab (searchId, skills, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, locVal, locVal, locVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
+      });
+    } else if (req.body.skills && req.body.company && !req.body.location) {
+      const skillArr = req.body.skills.split(', ');
+      const compArr = req.body.company.split(', ');
+      skillArr.forEach((skillVal) => {
+        compArr.forEach((compVal) => {
+          const insertQuery = query('INSERT INTO search_lab (searchId, skills, company, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, compVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
+      });
+    } else if (req.body.location && req.body.company && !req.body.skills) {
+      const compArr = req.body.company.split(', ');
+      const locArr = req.body.location.split(', ');
+      locArr.forEach((locVal) => {
+        compArr.forEach((compVal) => {
+          const insertQuery = query('INSERT INTO search_lab (searchId, company, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, compVal, locVal, locVal, locVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
       });
     } else res.status(400).json({ success: false, msg: 'Bad Request' });
+    Promise.allSettled(insertQueries).then((val) => {
+      console.log(val);
+      const sql = `SELECT DISTINCT ${req.body.skills ? 'vac_skills' : 'vac_details'}.vac_id FROM ${req.body.skills ? 'vac_skills JOIN search_lab ON vac_skills.skills = search_lab.skills' : ''} ${req.body.skills && req.body.location ? 'JOIN vac_details ON (vac_details.village = search_lab.village OR vac_details.city = search_lab.city OR vac_details.state = search_lab.state)' : ''} ${req.body.skills && req.body.location && req.body.company ? 'AND vac_details.vac_name = search_lab.company' : ''} ${req.body.skills && !req.body.location && req.body.company ? 'JOIN search_lab ON vac_details.vac_name = search_lab.company' : ''} ${!req.body.skills && req.body.location ? 'vac_details JOIN search_lab ON (vac_details.village = search_lab.village OR vac_details.city = search_lab.city OR vac_details.state = search_lab.state)' : ''} ${!req.body.skills && req.body.location && req.body.company ? 'AND vac_details.vac_name = search_lab.company' : ''} ${!req.body.skills && !req.body.location && req.body.company ? 'vac_details JOIN search_lab ON vac_details.vac_name = search_lab.company' : ''} WHERE search_lab.searchId = ?`;
+      dbConnection.query(sql, [sId], (err, vacancies) => {
+        console.log(sql);
+        if (err) next(err);
+        if (vacancies.length > 0) {
+          const vacancyQueries = [];
+          const sql2 = 'SELECT job_desc, vacancy, vac_name, village, city, state, vac_id FROM vac_details WHERE vac_id = ?';
+          for (let i = 0; i < vacancies.length; i += 1) {
+            const vacDetailQuery = query(sql2, [vacancies[i].vac_id]);
+            const vacSkillQuery = query('SELECT DISTINCT skills FROM vac_skills WHERE vac_id = ?', [vacancies[i].vac_id]);
+            const vacancyQuery = Promise.all([vacDetailQuery, vacSkillQuery]).then((values) => ({
+              ...values[0][0],
+              skills: values[1].map((val) => val.skills),
+            }), (err2) => {
+              next(err2);
+            });
+            vacancyQueries.push(vacancyQuery);
+          }
+          Promise.allSettled(vacancyQueries).then((values) => {
+            const vacArr = [];
+            values.forEach((result) => {
+              if (result.status === 'fulfilled') {
+                vacArr.push(result.value);
+              }
+            });
+            console.log(vacArr);
+            res.status(200).json({ success: true, results: vacArr, msg: 'Successfully found jobs for you' });
+          });
+        } else res.status(200).json({ success: false, msg: 'No such vacancies found' });
+      });
+    });
   });
 
   router.post('/searchLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (req.body.skills || req.body.location) {
-      const sql = `SELECT DISTINCT lab_details.user_email FROM lab_details JOIN lab_skills ON lab_details.user_email = lab_skills.user_email WHERE ${req.body.skills === '' ? '' : 'lab_skills.skills = ?'} ${req.body.skills !== '' && req.body.location !== '' ? 'AND' : ''} ${req.body.location === '' ? '' : '(lab_details.village = ? OR lab_details.city = ? OR lab_details.state = ?)'}`;
-      const searchArr = [];
-      if (req.body.skills !== '') searchArr.push(req.body.skills);
-      if (req.body.location !== '') {
-        searchArr.push(req.body.location);
-        searchArr.push(req.body.location);
-        searchArr.push(req.body.location);
-      }
-      dbConnection.query(sql, searchArr, (err, results) => {
-        if (err) next(err);
-        if (results) {
-          console.log(sql);
-          console.log(searchArr);
-          console.log(results);
-          res.status(200).json({ success: true, results, msg: 'Search results found' });
-        }
+    const insertQueries = [];
+    const sId = uuidv4();
+    if (req.body.skills && req.body.location) {
+      const skillArr = req.body.skills.split(', ');
+      const locArr = req.body.location.split(', ');
+      skillArr.forEach((skillVal) => {
+        locArr.forEach((locVal) => {
+          const insertQuery = query('INSERT INTO search_vac (searchId, skills, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, locVal, locVal, locVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
+      });
+    } else if (req.body.skills) {
+      const skillArr = req.body.skills.split(', ');
+      skillArr.forEach((skillVal) => {
+        const insertQuery = query('INSERT INTO search_vac (searchId, skills, user_email) VALUES (?, ?, ?)', [sId, skillVal, req.body.user]);
+        insertQueries.push(insertQuery);
+      });
+    } else if (req.body.location) {
+      const locArr = req.body.location.split(', ');
+      locArr.forEach((locVal) => {
+        const insertQuery = query('INSERT INTO search_vac (searchId, village, city, state, user_email) VALUES (?, ?, ?, ?, ?)', [sId, locVal, locVal, locVal, req.body.user]);
+        insertQueries.push(insertQuery);
       });
     } else res.status(400).json({ success: false, msg: 'Bad Request' });
+    Promise.allSettled(insertQueries).then(() => {
+      const sql = `SELECT DISTINCT ${req.body.skills ? 'lab_skills' : 'lab_details'}.user_email FROM ${req.body.skills ? 'lab_skills JOIN search_vac ON lab_skills.skills = search_vac.skills' : ''} ${req.body.skills && req.body.location ? 'JOIN lab_details ON (lab_details.village = search_vac.village OR lab_details.city = search_vac.city OR lab_details.state = search_vac.state)' : ''} ${!req.body.skills && req.body.location ? 'lab_details JOIN search_vac ON (lab_details.village = search_vac.village OR lab_details.city = search_vac.city OR lab_details.state = search_vac.state)' : ''} WHERE search_vac.searchId = ?`;
+      dbConnection.query(sql, [sId], (err, userEmails) => {
+        if (err) next(err);
+        if (userEmails.length > 0) {
+          const candidateQueries = [];
+          const sql2 = 'SELECT lab_details.user_email, lab_details.village, lab_details.city, lab_details.state, user_accounts.mobileNum, user_accounts.username FROM lab_details JOIN user_accounts ON lab_details.user_email = user_accounts.user_email WHERE lab_details.user_email = ?';
+          userEmails.forEach((email) => {
+            const labDetailQuery = query(sql2, [email.user_email]);
+            const labSkillQuery = query('SELECT DISTINCT skills FROM lab_skills WHERE user_email = ?', [email.user_email]);
+            const candidateQuery = Promise.all([labDetailQuery, labSkillQuery]).then((values) => ({
+              ...values[0][0],
+              skills: values[1].map((val) => val.skills),
+            }), (err2) => {
+              next(err2);
+            });
+            candidateQueries.push(candidateQuery);
+          });
+          Promise.allSettled(candidateQueries).then((values) => {
+            const resultArr = [];
+            values.forEach((result) => {
+              if (result.status === 'fulfilled') {
+                resultArr.push(result.value);
+              }
+            });
+            console.log(resultArr);
+            res.status(200).json({ success: true, results: resultArr, msg: 'Successfully found jobs for you' });
+          });
+        } else res.status(200).json({ success: false, msg: 'No such candidates found' });
+      });
+    });
   });
 
   router.post('/viewLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {

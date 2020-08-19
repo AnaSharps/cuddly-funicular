@@ -24,7 +24,7 @@ export default class EmployerLoggedIn extends React.Component {
       searchInput: '',
       locationInput: '',
       searchResults: [],
-      searchHappened: false,
+      searchHappened: 0,
     };
     this.createVacancyHandler = this.createVacancyHandler.bind(this);
   }
@@ -37,7 +37,7 @@ export default class EmployerLoggedIn extends React.Component {
     const {
       userSkills, userVillage, userCity, userState, vacancy, jobDesc, jobName,
     } = { ...this.state };
-    fetch('https://19485340cb67.ngrok.io/users/createVacancy', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/createVacancy', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -76,10 +76,11 @@ export default class EmployerLoggedIn extends React.Component {
   searchHandler() {
     const { route, navigation } = { ...this.props };
     const {
-      user, userType, token,
+      user, token, userType,
     } = route.params;
-    const { searchInput, locationInput, companyInput } = { ...this.state };
-    fetch('https://19485340cb67.ngrok.io/users/searchLabour', {
+    const { searchInput, locationInput } = { ...this.state };
+    this.setState({ searchHappened: 1 });
+    fetch('https://976e3fc59bb0.ngrok.io/users/searchLabour', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -87,14 +88,16 @@ export default class EmployerLoggedIn extends React.Component {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        user,
         skills: searchInput,
         location: locationInput,
       }),
     }).then((res) => res.json()).then((json) => {
-      this.setState({ searchHappened: true });
+      this.setState({ searchHappened: 2 });
       if (json.success) {
         this.setState({ searchResults: json.results });
       } else {
+        this.setState({ searchResults: [] });
         navigation.navigate('EmployerLoggedIn', {
           user, userType, token, createVacancy: true, error: json.msg,
         });
@@ -127,21 +130,48 @@ export default class EmployerLoggedIn extends React.Component {
             this.searchHandler();
           }}
         />
-        {searchHappened && !searchResults[0] && (
+        {searchHappened === 1 && (
+          <Text>Retrieving Search Results...</Text>
+        )}
+        {searchHappened === 2 && !searchResults[0] && (
           <Text>No matching candidates found</Text>
         )}
-        {searchHappened && searchResults[0] && searchResults.map((val) => (
-          <View key={val.user_email}>
-            <Text>{val.user_email}</Text>
-            <Button
-              title="Email"
-              onPress={() => {
-                Linking.openURL(`mailto:${val.user_email}`);
-              }}
-            />
-          </View>
-        ))}
-        {createVacancy && (
+        {searchHappened === 2 && searchResults[0] && searchResults.map((val) => {
+          const {
+            username, user_email, village, city, state, mobileNum, skills,
+          } = val;
+          return (
+            <View key={user_email}>
+              <Text>
+                {username}
+                ,
+                {' '}
+                {mobileNum}
+                ,
+                {' '}
+                {user_email}
+                ,
+                {` ${village}, ${city}, ${state}`}
+                ,
+                {' '}
+                {skills.join(', ')}
+              </Text>
+              <Button
+                title="Send Email"
+                onPress={() => {
+                  Linking.openURL(`mailto:${user_email}`);
+                }}
+              />
+              <Button
+                title="Call"
+                onPress={() => {
+                  Linking.openURL(`tel:${mobileNum}`);
+                }}
+              />
+            </View>
+          );
+        })}
+        {!searchHappened && createVacancy && (
         <>
           <Text>Please Enter the Vacancy details:</Text>
           <TextInput placeholder="Job Name" defaultValue={jobName} onChangeText={(e) => this.setState({ jobName: e })} />
@@ -169,7 +199,7 @@ export default class EmployerLoggedIn extends React.Component {
           />
         </>
         )}
-        {!createVacancy && (
+        {!searchHappened && !createVacancy && (
         <>
           <Button
             title="Create Vacancy"
