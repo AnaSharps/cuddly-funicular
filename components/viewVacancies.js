@@ -14,6 +14,7 @@ export default class ViewVacancies extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      loading: true,
       vacancyNameList: null,
     };
   }
@@ -21,7 +22,7 @@ export default class ViewVacancies extends React.Component {
   componentDidMount() {
     const { route, navigation } = { ...this.props };
     const { user, token } = route.params;
-    fetch('https://90b07c9dffef.ngrok.io/users/viewVacancies', {
+    fetch('https://19485340cb67.ngrok.io/users/viewVacancies', {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -33,38 +34,10 @@ export default class ViewVacancies extends React.Component {
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {
-        this.setState({ success: true, vacancyNameList: json.vacancies.map((val) => val.vac_name) });
+        this.setState({ loading: false, vacancyNameList: json.vacancies });
       } else {
-        navigation.navigate('LoggedIn', {
-          user, userType: 'employer', details: null, token, createVacancy: false, userDetails: null, skillList: null,
-        });
-      }
-    }, () => {
-      SecureStore.deleteItemAsync('authToken');
-      navigation.navigate('WelcomeLogin', { error: 'Unauthorized User' });
-    });
-  }
-
-  viewApplicationsHandler(vacancy) {
-    const { route, navigation } = { ...this.props };
-    const { user, token } = route.params;
-    fetch('https://90b07c9dffef.ngrok.io/users/viewApplications', {
-      method: 'POST',
-      headers: {
-        Authorization: token,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user,
-        vacancy,
-      }),
-    }).then((res) => res.json()).then((json) => {
-      if (json.success) {
-        this.setState({ success: true, vacancyNameList: json.vacancies.map((val) => val.vac_name) });
-      } else {
-        navigation.navigate('LoggedIn', {
-          user, userType: 'employer', details: null, token, createVacancy: false, userDetails: null, skillList: null,
+        navigation.navigate('ViewVacancies', {
+          user, token, error: json.msg,
         });
       }
     }, () => {
@@ -75,17 +48,28 @@ export default class ViewVacancies extends React.Component {
 
   render() {
     const { route, navigation } = { ...this.props };
-    const { user, token } = route.params;
-    const { success, vacancyNameList } = { ...this.state };
+    const { user, token, error } = route.params;
+    const { loading, vacancyNameList, applications, viewApplicants } = { ...this.state };
     return (
       <ScreenContainer>
-        <Text>Hi</Text>
-        {success && vacancyNameList.map((val) => (
+        {loading && (
+          <Text>
+            Retrieving Vacancies
+            ...
+          </Text>
+        )}
+        {error && (
+          <Text>{error}</Text>
+        )}
+        {!loading && vacancyNameList.map((val) => (
           <>
-            <Text key={uuid.v4()}>{val}</Text>
-            <Button title="View Applicants" onPress={() => {
-              this.viewApplicationsHandler(val);
-            }} />
+            <Text key={uuid.v4()}>{val.vac_name}</Text>
+            <Button
+              title="View Applicants"
+              onPress={() => navigation.navigate('ViewApplicants', {
+                user, token, vacancyId: val.vac_id,
+              })}
+            />
           </>
         ))}
       </ScreenContainer>

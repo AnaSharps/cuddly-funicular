@@ -2,62 +2,90 @@
 /* eslint-disable linebreak-style */
 /* eslint-disable max-len */
 /* eslint-disable react/jsx-filename-extension */
-import React, { Component, useState, useEffect } from 'react';
+import React from 'react';
 import {
   Text, View, TextInput, Button,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenContainer } from 'react-native-screens';
 
-export const WelcomeLogin = ({ route, navigation }) => {
-  const { error } = route.params;
-  let email = null;
-  let password = null;
-  let mobile = null;
-  return (
-    <ScreenContainer>
-      {error && (
-        <Text>{error}</Text>
-      )}
-      <TextInput placeholder="Email-Id" keyboardType="email-address" onChangeText={(e) => { email = e; }} />
-      <TextInput placeholder="Password" secureTextEntry onChangeText={(e) => { password = e; }} />
-      <Button
-        title="Submit"
-        onPress={() => {
-          fetch('https://90b07c9dffef.ngrok.io/users/login', {
-            method: 'POST',
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email,
-              password,
-            }),
-          }).then((res) => res.json()).then((json) => {
-            if (json.success) {
-              const authToken = JSON.stringify(json);
-              SecureStore.setItemAsync('authToken', authToken);
-              navigation.navigate('LoggedIn', {
-                user: json.user,
-                userType: json.userType,
-                details: json.details,
-                token: json.token,
-                createVacancy: false,
-              });
-            } else {
-              navigation.push('WelcomeLogin', {
-                error: json.msg,
-              });
-            }
-          });
-        }}
-      />
-      <Button title="Register" onPress={() => navigation.navigate('Register', { error: null })} />
-    </ScreenContainer>
-  );
-};
+export default class WelcomeLogin extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      email: null,
+      password: null,
+    };
+  }
 
+  loginHandler() {
+    const { navigation } = { ...this.props };
+    const { email, password } = { ...this.state };
+    fetch('https://19485340cb67.ngrok.io/users/login', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    }).then((res) => res.json()).then((json) => {
+      if (json.success) {
+        const authToken = JSON.stringify(json);
+        SecureStore.setItemAsync('authToken', authToken);
+        switch (json.userType) {
+          case 'labour':
+            navigation.navigate('LabourLoggedIn', {
+              user: json.user,
+              userType: 'labour',
+              details: json.details,
+              token: json.token,
+              error: null,
+            });
+            break;
+          case 'employer':
+            navigation.navigate('EmployerLoggedIn', {
+              user: json.user,
+              userType: 'employer',
+              token: json.token,
+              createVacancy: false,
+              error: null,
+            });
+            break;
+          default:
+            //
+        }
+      } else {
+        navigation.push('WelcomeLogin', {
+          error: json.msg,
+        });
+      }
+    });
+  }
+
+  render() {
+    const { route, navigation } = { ...this.props };
+    const { error } = route.params;
+    return (
+      <ScreenContainer>
+        {error && (
+        <Text>{error}</Text>
+        )}
+        <TextInput placeholder="Email-Id" keyboardType="email-address" onChangeText={(e) => this.setState({ email: e })} />
+        <TextInput placeholder="Password" secureTextEntry onChangeText={(e) => this.setState({ password: e })} />
+        <Button
+          title="Submit"
+          onPress={() => {
+            this.loginHandler();
+          }}
+        />
+        <Button title="Register" onPress={() => navigation.navigate('Register', { error: null })} />
+      </ScreenContainer>
+    );
+  }
+}
 // class AppForm extends Component {
 //   constructor(props) {
 //     super(props);
