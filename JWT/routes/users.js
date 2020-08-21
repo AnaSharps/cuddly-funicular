@@ -1,8 +1,5 @@
 /* eslint-disable linebreak-style */
 /* eslint-disable max-len */
-
-const { promises } = require('fs');
-
 /* eslint-disable linebreak-style */
 module.exports = (dbConnection) => {
   const express = require('express');
@@ -14,6 +11,56 @@ module.exports = (dbConnection) => {
   const query = util.promisify(dbConnection.query).bind(dbConnection);
 
   router.use(express.json());
+
+  const validateEmail = (email) => {
+    if (typeof email === 'string' && email.length > 0 && email.length <= 50 && email.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) return true;
+    return false;
+  };
+
+  const validatePassword = (password) => {
+    if (typeof password === 'string' && password.length > 0 && password.length <= 12) return true;
+    return false;
+  };
+
+  const validateUserType = (userType) => {
+    if (userType === 'labour' || userType === 'employer' || userType === 'admin') return true;
+    return false;
+  };
+
+  const validateMobile = (mobile) => {
+    if (mobile > 1000000000 && mobile < 1000000000) return true;
+    return false;
+  };
+
+  const validateSchema = ({ login, register }) => {
+    if (login) {
+      const { email, password } = login;
+
+      if (email && password) {
+        if (validateEmail(email)) {
+          if (validatePassword(password)) return { success: true };
+          return { success: false, error: 'Invalid Password' };
+        } return { success: false, error: 'Invalid Email id' };
+      } return { success: false, error: 'Bad Request' };
+    } if (register) {
+      const {
+        email, username, mobile, password, userType, details,
+      } = register;
+
+      if (email && username && mobile && password && userType && (details === 0 || details === 1)) {
+        if (validateEmail(email)) {
+          if (validatePassword(password)) {
+            if (validateMobile(mobile)) {
+              if (typeof username === 'string' && username.length > 0 && username.length <= 50) {
+                if (validateUserType(userType)) return { success: true };
+                return { success: false, error: 'Invalid Usertype' };
+              } return { success: false, error: 'Invalid Username' };
+            } return { success: false, error: 'Invalid mobile number' };
+          } return { success: false, error: 'Invalid password' };
+        } return { success: false, error: 'Invalid Email id' };
+      } return { success: false, error: 'Bad Request' };
+    }
+  };
 
   router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
@@ -415,7 +462,7 @@ module.exports = (dbConnection) => {
 
   router.post('/login', (req, res, next) => {
     console.log(req.body);
-    if (req.body.email && req.body.password) {
+    if (validateSchema({ login: { email: req.body.email, password: req.body.password } })) {
       dbConnection.query('SELECT * FROM user_accounts WHERE user_email = ?', [req.body.email], (err, user) => {
         console.log(user);
         if (err) {
@@ -445,34 +492,38 @@ module.exports = (dbConnection) => {
           });
         }
       });
-    } else {
-      res.status(401).json({ success: false, msg: 'Malformed request' });
-    }
+    } else res.status(401).json({ success: false, msg: 'Malformed Request!' });
   });
 
   // TODO
   router.post('/register', (req, res, next) => {
-    dbConnection.query(`SELECT user_email, username FROM user_accounts WHERE ( user_email='${req.body.email}' OR mobileNum='${req.body.mobile}')`, (err, user) => {
-      console.log(user);
-      if (user[0]) return res.json({ success: false, msg: 'User already Exists!', user: user[0].username });
-      utils.genPassword(req.body.password).then((hash) => {
-        console.log(hash);
-        dbConnection.query('INSERT INTO user_accounts (username, hash, userType, mobileNum, details, user_email) VALUES (?, ?, ?, ?, ?, ?)', [req.body.username, hash, req.body.userType, req.body.mobile, req.body.details, req.body.email], (error, User) => {
-          console.log(req.body);
-          console.log(req.body.userType);
-          if (error) {
-            console.log('error encountered!');
-            next(error);
-          } else if (User) {
-            console.log('sending res');
-            const jwt = utils.issueJWT({ user_email: req.body.email });
-            return res.json({
-              success: true, user: req.body.email, userType: req.body.userType, details: req.body.details, token: jwt.token, expiresIn: jwt.expires,
-            });
-          } else console.log('nothing here!');
-        });
-      }, () => console.log('error generating password'));
-    });
+    if (validateSchema({
+      register: {
+        email: req.body.email, username: req.body.username, mobile: req.body.mobile, password: req.body.password, userType: req.body.userType, details: req.body.details,
+      },
+    })) {
+      dbConnection.query(`SELECT user_email, username FROM user_accounts WHERE ( user_email='${req.body.email}' OR mobileNum='${req.body.mobile}')`, (err, user) => {
+        console.log(user);
+        if (user[0]) return res.json({ success: false, msg: 'User already Exists!', user: user[0].username });
+        utils.genPassword(req.body.password).then((hash) => {
+          console.log(hash);
+          dbConnection.query('INSERT INTO user_accounts (username, hash, userType, mobileNum, details, user_email) VALUES (?, ?, ?, ?, ?, ?)', [req.body.username, hash, req.body.userType, req.body.mobile, req.body.details, req.body.email], (error, User) => {
+            console.log(req.body);
+            console.log(req.body.userType);
+            if (error) {
+              console.log('error encountered!');
+              next(error);
+            } else if (User) {
+              console.log('sending res');
+              const jwt = utils.issueJWT({ user_email: req.body.email });
+              return res.json({
+                success: true, user: req.body.email, userType: req.body.userType, details: req.body.details, token: jwt.token, expiresIn: jwt.expires,
+              });
+            } else console.log('nothing here!');
+          });
+        }, () => console.log('error generating password'));
+      });
+    } else res.status(401).json({ success: false, msg: 'Malformed Request!' });
   });
   return router;
 };
