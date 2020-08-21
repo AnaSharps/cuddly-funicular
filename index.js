@@ -4,85 +4,105 @@
 /* eslint-disable react/jsx-filename-extension */
 import React from 'react';
 import {
-  Text, TextInput, Button,
+  Text, TextInput, Button, Dimensions, StyleSheet, View, Image, TouchableOpacity,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenContainer } from 'react-native-screens';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Animatable from 'react-native-animatable';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-export default class WelcomeLogin extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      email: null,
-      password: null,
-    };
-  }
+const logo = require('./assets/logo.png');
 
-  loginHandler() {
-    const { navigation } = { ...this.props };
-    const { email, password } = { ...this.state };
-    fetch('https://976e3fc59bb0.ngrok.io/users/login', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    }).then((res) => res.json()).then((json) => {
-      if (json.success) {
-        const authToken = JSON.stringify(json);
-        SecureStore.setItemAsync('authToken', authToken);
-        switch (json.userType) {
-          case 'labour':
-            navigation.navigate('LabourLoggedIn', {
-              user: json.user,
-              userType: 'labour',
-              details: json.details,
-              token: json.token,
-              error: null,
-            });
-            break;
-          case 'employer':
-            navigation.navigate('EmployerLoggedIn', {
-              user: json.user,
-              userType: 'employer',
-              token: json.token,
-              createVacancy: false,
-              error: null,
-            });
-            break;
-          default:
-            //
-        }
-      } else {
-        navigation.push('WelcomeLogin', {
-          error: json.msg,
-        });
-      }
-    });
-  }
+const { height } = Dimensions.get('screen');
+const heightLogo = height * 0.28;
 
-  render() {
-    const { route, navigation } = { ...this.props };
-    const { error } = route.params;
-    return (
-      <ScreenContainer>
-        {error && (
-        <Text>{error}</Text>
-        )}
-        <TextInput placeholder="Email-Id" keyboardType="email-address" onChangeText={(e) => this.setState({ email: e })} />
-        <TextInput placeholder="Password" secureTextEntry onChangeText={(e) => this.setState({ password: e })} />
-        <Button
-          title="Submit"
-          onPress={() => {
-            this.loginHandler();
-          }}
-        />
-        <Button title="Register" onPress={() => navigation.navigate('Register', { error: null })} />
-      </ScreenContainer>
-    );
-  }
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#009387',
+  },
+  header: {
+    flex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingVertical: 50,
+    paddingHorizontal: 30,
+  },
+  logo: {
+    width: heightLogo,
+    height: heightLogo,
+  },
+  title: {
+    color: '#05375a',
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
+  text: {
+    color: 'grey',
+    marginTop: 30,
+  },
+  button: {
+    alignItems: 'flex-end',
+    marginTop: 30,
+  },
+  signIn: {
+    width: 150,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    flexDirection: 'row',
+  },
+  textSign: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+});
+
+const WelcomeLogin = ({ navigation }) => (
+  <ScreenContainer style={styles.container}>
+    <View style={styles.header}>
+      <Animatable.Image
+        animation="bounceIn"
+        duration={3500}
+        source={logo}
+        style={styles.logo}
+        resizeMode="stretch"
+      />
+    </View>
+    <Animatable.View
+      animation="fadeInUpBig"
+      style={styles.footer}
+    >
+      <Text style={styles.title}>Stay Connected!</Text>
+      <Text style={styles.text}>Sign In</Text>
+      <View style={styles.button}>
+        <TouchableOpacity onPress={() => navigation.navigate('SignIn', {
+          error: null,
+        })}
+        >
+          <LinearGradient
+            colors={['#08d4c4', '#01ab9d']}
+            style={styles.signIn}
+          >
+            <Text style={styles.textSign}>Get Started</Text>
+            <MaterialIcons
+              name="navigate-next"
+              color="#fff"
+              size={20}
+            />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </Animatable.View>
+  </ScreenContainer>
+);
+
+export default WelcomeLogin;

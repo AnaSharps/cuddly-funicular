@@ -246,13 +246,13 @@ module.exports = (dbConnection) => {
         if (err) next(err);
         if (vacancies.length > 0) {
           const vacancyQueries = [];
-          const sql2 = 'SELECT job_desc, vacancy, vac_name, village, city, state, vac_id FROM vac_details WHERE vac_id = ?';
+          const sql2 = 'SELECT job_desc, vacancy, vac_name, village, city, state, vac_id, user_email FROM vac_details WHERE vac_id = ?';
           for (let i = 0; i < vacancies.length; i += 1) {
             const vacDetailQuery = query(sql2, [vacancies[i].vac_id]);
             const vacSkillQuery = query('SELECT DISTINCT skills FROM vac_skills WHERE vac_id = ?', [vacancies[i].vac_id]);
             const vacancyQuery = Promise.all([vacDetailQuery, vacSkillQuery]).then((values) => ({
               ...values[0][0],
-              skills: values[1].map((val) => val.skills),
+              skills: values[1].map((value) => value.skills),
             }), (err2) => {
               next(err2);
             });
