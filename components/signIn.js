@@ -97,7 +97,7 @@ export default class SignIn extends React.Component {
   }
 
   textInputChange(val) {
-    if (val.length !== 0) {
+    if (typeof val === 'string' && val.length !== 0 && val.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) {
       this.setState({ email: val, checkTextInput: true });
     } else {
       this.setState({ email: val, checkTextInput: false });
@@ -154,7 +154,7 @@ export default class SignIn extends React.Component {
   render() {
     const { route, navigation } = { ...this.props };
     const { error } = route.params;
-    const { checkTextInput, secureTextEntry } = { ...this.state };
+    const { checkTextInput, secureTextEntry, password } = { ...this.state };
     return (
       <ScreenContainer style={styles.container}>
         <StatusBar backgroundColor="#009387" barStyle="light-content" />
@@ -236,10 +236,11 @@ export default class SignIn extends React.Component {
           <View>
             <TouchableOpacity
               style={styles.button}
+              disabled={!(checkTextInput && password.length > 0)}
               onPress={() => this.loginHandler()}
             >
               <LinearGradient
-                colors={['#08d4c4', '#01ab9d']}
+                colors={(checkTextInput && password.length > 0) ? ['#08d4c4', '#01ab9d'] : ['#999999', '#777777']}
                 style={styles.signIn}
               >
                 <Text style={{ ...styles.textSign, color: '#fff' }}>

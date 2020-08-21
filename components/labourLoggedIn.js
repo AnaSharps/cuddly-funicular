@@ -33,7 +33,7 @@ export default class LabourLoggedIn extends React.Component {
       user, userType, token,
     } = route.params;
     const {
-      userSkills, userVillage, userCity, userState, vacancy, jobDesc, jobName,
+      userSkills, userVillage, userCity, userState,
     } = { ...this.state };
     fetch('https://976e3fc59bb0.ngrok.io/users/protected', {
       method: 'POST',
@@ -49,9 +49,6 @@ export default class LabourLoggedIn extends React.Component {
         userVillage,
         userCity,
         userState,
-        vacancy,
-        jobDesc,
-        jobName,
         details: 1,
         updateInfo: this.sendUpdate,
       }),
