@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
+import utils from '../JWT/lib/utils';
 
 const styles = StyleSheet.create({
   container: {
@@ -93,68 +94,98 @@ export default class SignIn extends React.Component {
       password: '',
       checkTextInput: false,
       secureTextEntry: true,
+      errorPass: '',
+      errorEmail: '',
     };
   }
 
   textInputChange(val) {
-    if (typeof val === 'string' && val.length !== 0 && val.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) {
-      this.setState({ email: val, checkTextInput: true });
+    if (typeof val === 'string' && val.length > 0 && val.length <= 50 && val.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) {
+      this.setState({ email: val, checkTextInput: true, errorEmail: '' });
     } else {
       this.setState({ email: val, checkTextInput: false });
     }
   }
 
+  validateSchema({ email, password }) {
+    if (email.length > 0) {
+      if (email.length <= 50) {
+        if (typeof email === 'string' && email.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) {
+          if (password.length > 0) {
+            if (typeof password === 'string') {
+              if (password.length <= 12) return true;
+              this.setState({ errorPass: 'Password length should be less than 12', errorEmail: '' });
+              return false;
+            }
+            this.setState({ errorPass: 'Please enter valid password', errorEmail: '' });
+            return false;
+          }
+          this.setState({ errorPass: 'Password cannot be blank', errorEmail: '' });
+          return false;
+        }
+        this.setState({ errorEmail: 'Please enter a valid Email address', errorPass: '' });
+        return false;
+      }
+      this.setState({ errorEmail: 'Email length should be less than 50', errorPass: '' });
+      return false;
+    }
+    this.setState({ errorEmail: 'Email cannot be blank', errorPass: '' });
+    return false;
+  }
+
   loginHandler() {
     const { navigation } = { ...this.props };
     const { email, password } = { ...this.state };
-    fetch('https://976e3fc59bb0.ngrok.io/users/login', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    }).then((res) => res.json()).then((json) => {
-      if (json.success) {
-        const authToken = JSON.stringify(json);
-        SecureStore.setItemAsync('authToken', authToken);
-        switch (json.userType) {
-          case 'labour':
-            navigation.navigate('LabourLoggedIn', {
-              user: json.user,
-              userType: 'labour',
-              details: json.details,
-              token: json.token,
-              error: null,
-            });
-            break;
-          case 'employer':
-            navigation.navigate('EmployerLoggedIn', {
-              user: json.user,
-              userType: 'employer',
-              token: json.token,
-              createVacancy: false,
-              error: null,
-            });
-            break;
-          default:
+    if (this.validateSchema({ email, password })) {
+      fetch('https://976e3fc59bb0.ngrok.io/users/login', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      }).then((res) => res.json()).then((json) => {
+        if (json.success) {
+          const authToken = JSON.stringify(json);
+          SecureStore.setItemAsync('authToken', authToken);
+          switch (json.userType) {
+            case 'labour':
+              navigation.navigate('LabourLoggedIn', {
+                user: json.user,
+                userType: 'labour',
+                details: json.details,
+                token: json.token,
+                error: null,
+              });
+              break;
+            case 'employer':
+              navigation.navigate('EmployerLoggedIn', {
+                user: json.user,
+                userType: 'employer',
+                token: json.token,
+                createVacancy: false,
+                error: null,
+              });
+              break;
+            default:
               //
+          }
+        } else {
+          navigation.push('SignIn', {
+            error: json.msg,
+          });
         }
-      } else {
-        navigation.push('SignIn', {
-          error: json.msg,
-        });
-      }
-    });
+      });
+    }
   }
 
   render() {
     const { route, navigation } = { ...this.props };
     const { error } = route.params;
-    const { checkTextInput, secureTextEntry, password } = { ...this.state };
+    const { checkTextInput, secureTextEntry, password, errorEmail, errorPass } = { ...this.state };
     return (
       <ScreenContainer style={styles.container}>
         <StatusBar backgroundColor="#009387" barStyle="light-content" />
@@ -174,6 +205,9 @@ export default class SignIn extends React.Component {
           style={styles.footer}
         >
           <Text style={styles.text_footer}>Email</Text>
+          {errorEmail ? (
+            <Text style={styles.text_footer}>{errorEmail}</Text>
+          ) : null}
           <View style={styles.action}>
             <FontAwesome
               name="user-o"
@@ -183,6 +217,7 @@ export default class SignIn extends React.Component {
             <TextInput
               placeholder="Email-Id"
               style={styles.textInput}
+              maxLength={50}
               keyboardType="email-address"
               onChangeText={(e) => this.textInputChange(e)}
             />
@@ -203,6 +238,9 @@ export default class SignIn extends React.Component {
           >
             Password
           </Text>
+          {errorPass ? (
+            <Text style={styles.text_footer}>{errorPass}</Text>
+          ) : null}
           <View style={styles.action}>
             <Feather
               name="lock"
@@ -212,6 +250,7 @@ export default class SignIn extends React.Component {
             <TextInput
               placeholder="Password"
               style={styles.textInput}
+              maxLength={12}
               secureTextEntry={secureTextEntry}
               onChangeText={(e) => this.setState({ password: e })}
             />
@@ -236,11 +275,10 @@ export default class SignIn extends React.Component {
           <View>
             <TouchableOpacity
               style={styles.button}
-              disabled={!(checkTextInput && password.length > 0)}
               onPress={() => this.loginHandler()}
             >
               <LinearGradient
-                colors={(checkTextInput && password.length > 0) ? ['#08d4c4', '#01ab9d'] : ['#999999', '#777777']}
+                colors={['#08d4c4', '#01ab9d']}
                 style={styles.signIn}
               >
                 <Text style={{ ...styles.textSign, color: '#fff' }}>

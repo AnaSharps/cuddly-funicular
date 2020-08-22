@@ -100,7 +100,11 @@ export default class Register extends React.Component {
       checkTextInputMobile: false,
       passwordMatch: false,
       schemaMatch: false,
+      checkPass: false,
       secureTextEntry: true,
+      errorEntries: {
+        email: '', pass: '', username: '', mobile: '',
+      },
     };
     this.radioProps = [
       { label: 'Labour', value: 0 },
@@ -110,33 +114,123 @@ export default class Register extends React.Component {
   }
 
   textInputChange({
-    username, email, mobile, confirmPass,
+    username, email, mobile, confirmPass, passwordInp,
   }) {
-    const { password } = { ...this.state };
+    const { password, errorEntries } = { ...this.state };
     if (username) {
       if (typeof username === 'string' && username.length !== 0) {
-        this.setState({ username, checkTextInputUsername: true });
+        this.setState({ username, checkTextInputUsername: true, errorEntries: { ...errorEntries, username: '' } });
       } else this.setState({ username, checkTextInputUsername: false });
     } else if (email) {
       if (typeof email === 'string' && email.length !== 0 && email.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) {
-        this.setState({ email, checkTextInputEmail: true });
+        this.setState({ email, checkTextInputEmail: true, errorEntries: { ...errorEntries, email: '' } });
       } else this.setState({ email, checkTextInputEmail: false });
     } else if (mobile) {
-      if (mobile > 1000000000) {
-        this.setState({ mobile, checkTextInputMobile: true });
+      if (mobile > 1000000000 && mobile < 10000000000) {
+        this.setState({ mobile, checkTextInputMobile: true, errorEntries: { ...errorEntries, email: '' } });
       } else this.setState({ mobile, checkTextInputMobile: false });
+    } else if (passwordInp) {
+      if (passwordInp.length > 0 && passwordInp.length <= 12 && typeof passwordInp === 'string') {
+        this.setState({ password: passwordInp, checkPass: true, errorEntries: { ...errorEntries, pass: '' } });
+      } else this.setState({ password: passwordInp, checkPass: false });
     } else if (confirmPass) {
       if (confirmPass.length > 0 && confirmPass === password) this.setState({ passwordMatch: true });
       else this.setState({ passwordMatch: false });
     }
   }
 
+  validateSchema({
+    email, password, username, mobile,
+  }) {
+    if (username.length > 0) {
+      if (username.length <= 50) {
+        if (typeof username === 'string') {
+          if (email.length > 0) {
+            if (email.length <= 50) {
+              if (typeof email === 'string' && email.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) {
+                if (mobile > 1000000000 && mobile < 10000000000) {
+                  if (password.length > 0) {
+                    if (password.length <= 12) {
+                      if (typeof password === 'string') return true;
+                      this.setState({
+                        errorEntries: {
+                          pass: 'Invalid password.', email: '', mobile: '', username: '',
+                        },
+                      });
+                      return false;
+                    }
+                    this.setState({
+                      errorEntries: {
+                        pass: 'Password less should be less than 12.', mobile: '', email: '', username: '',
+                      },
+                    });
+                    return false;
+                  }
+                  this.setState({
+                    errorEntries: {
+                      pass: 'Password cannot be blank.', mobile: '', username: '', email: '',
+                    },
+                  });
+                  return false;
+                }
+                this.setState({
+                  errorEntries: {
+                    pass: '', mobile: 'Invalid mobile number.', username: '', email: '',
+                  },
+                });
+                return false;
+              }
+              this.setState({
+                errorEntries: {
+                  email: 'Please enter a valid email address.', pass: '', mobile: '', username: '',
+                },
+              });
+              return false;
+            }
+            this.setState({
+              errorEntries: {
+                email: 'Email length should be less than 50.', pass: '', mobile: '', username: '',
+              },
+            });
+            return false;
+          }
+          this.setState({
+            errorEntries: {
+              email: 'Email cannot be blank.', pass: '', mobile: '', username: '',
+            },
+          });
+          return false;
+        }
+        this.setState({
+          errorEntries: {
+            username: 'Please enter a valid username.', email: '', pass: '', mobile: '',
+          },
+        });
+        return false;
+      }
+      this.setState({
+        errorEntries: {
+          username: 'Username length should be less than 50.', email: '', pass: '', mobile: '',
+        },
+      });
+      return false;
+    }
+    this.setState({
+      errorEntries: {
+        username: 'Username cannot be blank.', email: '', pass: '', mobile: '',
+      },
+    });
+    return false;
+  }
+
   registrationHandler() {
     const { navigation } = { ...this.props };
     const {
-      username, password, mobile, userType, email, checkTextInputUsername, checkTextInputEmail, checkTextInputMobile, passwordMatch,
+      username, password, mobile, userType, email, passwordMatch,
     } = { ...this.state };
-    if (checkTextInputUsername && checkTextInputEmail && checkTextInputMobile && passwordMatch && userType) {
+    if (this.validateSchema({
+      email, password, username, mobile,
+    }) && passwordMatch) {
       fetch('https://976e3fc59bb0.ngrok.io/users/register', {
         method: 'POST',
         headers: {
@@ -179,10 +273,6 @@ export default class Register extends React.Component {
           navigation.navigate('WelcomeLogin', { error: `Login as ${json.user}!` });
         } else navigation.navigate('Register', { error: json.msg });
       });
-    } else {
-      navigation.navigate('Register', {
-        error: 'Malformed Request',
-      });
     }
   }
 
@@ -190,7 +280,7 @@ export default class Register extends React.Component {
     const { route } = { ...this.props };
     const { error } = route.params;
     const {
-      username, email, password, checkTextInputUsername, checkTextInputEmail, checkTextInputMobile, secureTextEntry, passwordMatch, schemaMatch,
+      username, email, password, checkTextInputUsername, checkTextInputEmail, checkTextInputMobile, secureTextEntry, passwordMatch, errorEntries, checkPass,
     } = { ...this.state };
     return (
       <ScreenContainer style={styles.container}>
@@ -211,6 +301,9 @@ export default class Register extends React.Component {
           style={styles.footer}
         >
           <Text style={styles.text_footer}>Name</Text>
+          {errorEntries.username ? (
+            <Text style={styles.text_footer}>{errorEntries.username}</Text>
+          ) : null}
           <View style={styles.action}>
             <FontAwesome
               name="user-o"
@@ -240,6 +333,9 @@ export default class Register extends React.Component {
           >
             Email
           </Text>
+          {errorEntries.email ? (
+            <Text style={styles.text_footer}>{errorEntries.email}</Text>
+          ) : null}
           <View style={styles.action}>
             <FontAwesome
               name="user-o"
@@ -270,6 +366,9 @@ export default class Register extends React.Component {
           >
             Mobile Number
           </Text>
+          {errorEntries.mobile ? (
+            <Text style={styles.text_footer}>{errorEntries.mobile}</Text>
+          ) : null}
           <View style={styles.action}>
             <FontAwesome
               name="user-o"
@@ -301,6 +400,9 @@ export default class Register extends React.Component {
           >
             Password
           </Text>
+          {errorEntries.pass ? (
+            <Text style={styles.text_footer}>{errorEntries.pass}</Text>
+          ) : null}
           <View style={styles.action}>
             <Feather
               name="lock"
@@ -311,7 +413,7 @@ export default class Register extends React.Component {
               placeholder="Password"
               style={styles.textInput}
               secureTextEntry={secureTextEntry}
-              onChangeText={(e) => this.setState({ password: e })}
+              onChangeText={(e) => this.textInputChange({ passwordInp: e })}
             />
             <TouchableOpacity
               onPress={() => this.setState({ secureTextEntry: !secureTextEntry })}
@@ -336,6 +438,9 @@ export default class Register extends React.Component {
           >
             Confirm Password
           </Text>
+          {checkPass && !passwordMatch ? (
+            <Text style={styles.text_footer}>Passwords do not match.</Text>
+          ) : null}
           <View style={{ ...styles.action, flexDirection: 'row' }}>
             <Feather
               name="lock"
@@ -345,15 +450,12 @@ export default class Register extends React.Component {
             <TextInput
               placeholder="Confirm Password"
               style={styles.textInput}
-              secureTextEntry
+              secureTextEntry={secureTextEntry}
               onChangeText={(e) => this.textInputChange({ confirmPass: e })}
             />
-            {password.length > 0 && (passwordMatch
+            {password.length > 0 && password.length <= 12 && (passwordMatch
               ? (
-                <Animatable.View
-                  animation="bounceIn"
-                  style={styles.passwordMsg}
-                >
+                <Animatable.View>
                   <Feather
                     name="check-circle"
                     color="green"
@@ -384,7 +486,6 @@ export default class Register extends React.Component {
           <View>
             <TouchableOpacity
               style={styles.button}
-              disabled={!(checkTextInputUsername && checkTextInputEmail && checkTextInputMobile && passwordMatch)}
               onPress={() => this.registrationHandler()}
             >
               <LinearGradient

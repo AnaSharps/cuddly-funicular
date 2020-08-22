@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jsonwebtoken = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { validate } = require('uuid');
 
 const pathToKey = path.join(__dirname, '..', 'id_rsa_priv.pem');
 const PRIV_KEY = fs.readFileSync(pathToKey, 'utf8');
@@ -62,6 +63,55 @@ function issueJWT(user) {
   };
 }
 
+const validateEmail = (email) => {
+  if (typeof email === 'string' && email.length > 0 && email.length <= 50 && email.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) return true;
+  return false;
+};
+
+const validatePassword = (password) => {
+  if (typeof password === 'string' && password.length > 0 && password.length <= 12) return true;
+  return false;
+};
+
+const validateUserType = (userType) => {
+  if (userType === 'labour' || userType === 'employer' || userType === 'admin') return true;
+  return false;
+};
+
+const validateMobile = (mobile) => {
+  if (mobile > 1000000000 && mobile < 10000000000) return true;
+  return false;
+};
+
+function validateSchema({ login, register }) {
+  if (login) {
+    const { email, password } = login;
+    if (email && password) {
+      if (validateEmail(email)) {
+        if (validatePassword(password)) return { success: true };
+        return { success: false, error: 'Invalid Password' };
+      } return { success: false, error: 'Invalid Email id' };
+    } return { success: false, error: 'Bad Request' };
+  } if (register) {
+    const {
+      email, username, mobile, password, userType, details,
+    } = register;
+    if (email && username && mobile && password && userType && (details === 0 || details === 1)) {
+      if (validateEmail(email)) {
+        if (validatePassword(password)) {
+          if (validateMobile(mobile)) {
+            if (typeof username === 'string' && username.length > 0 && username.length <= 50) {
+              if (validateUserType(userType)) return { success: true };
+              return { success: false, error: 'Invalid Usertype' };
+            } return { success: false, error: 'Invalid Username' };
+          } return { success: false, error: 'Invalid mobile number' };
+        } return { success: false, error: 'Invalid password' };
+      } return { success: false, error: 'Invalid Email id' };
+    } return { success: false, error: 'Bad Request' };
+  }
+}
+
 module.exports.validPassword = validPassword;
 module.exports.genPassword = genPassword;
 module.exports.issueJWT = issueJWT;
+module.exports.validateSchema = validateSchema;
