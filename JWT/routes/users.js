@@ -8,13 +8,14 @@ module.exports = (dbConnection) => {
   const utils = require('../lib/utils');
   const { v4: uuidv4 } = require('uuid');
   const util = require('util');
+  const { verifySchema } = require('../lib/schemaVerifier');
   const query = util.promisify(dbConnection.query).bind(dbConnection);
 
   router.use(express.json());
 
   router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (utils.verifySchema('viewApplications', req.body).success) {
+    if (verifySchema('viewApplications', req.body).success) {
       dbConnection.query('SELECT DISTINCT vac_id FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacId) => {
         if (err) next(err);
         if (vacId.length > 0) {
@@ -58,7 +59,7 @@ module.exports = (dbConnection) => {
 
   router.post('/createVacancy', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (utils.verifySchema('createVacancy', req.body)) {
+    if (verifySchema('createVacancy', req.body)) {
       console.log('valid request');
       const vacId = uuidv4();
       dbConnection.query('INSERT INTO vac_details (job_desc, vacancy, village, city, state, vac_id, vac_name, user_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [req.body.jobDesc, req.body.vacancy, req.body.userVillage, req.body.userCity, req.body.userState, vacId, req.body.jobName, req.body.user], (err, user) => {
@@ -80,7 +81,7 @@ module.exports = (dbConnection) => {
   });
 
   router.post('/applyforJob', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (utils.verifySchema('applyforJob', req.body)) {
+    if (verifySchema('applyforJob', req.body)) {
       dbConnection.query('SELECT applicant_email FROM vac_applications WHERE applicant_email = ? AND vac_id = ?', [req.body.user, req.body.vacancyId], (err1, applicant) => {
         if (err1) next(err1);
         if (applicant.length > 0) res.status(200).json({ success: false, msg: 'You have already applied for this job' });
@@ -114,7 +115,7 @@ module.exports = (dbConnection) => {
   });
 
   router.post('/withdrawJob', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (utils.verifySchema('withdrawJob', req.body)) {
+    if (verifySchema('withdrawJob', req.body)) {
       dbConnection.query('SELECT applicant_email FROM vac_applications WHERE vac_id = ?', [req.body.vacancyId], (err, applicant) => {
         if (err) next(err);
         if (applicant.length > 0) {
@@ -139,7 +140,7 @@ module.exports = (dbConnection) => {
   });
 
   router.post('/viewJobsLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (utils.verifySchema('viewJobsLabour', req.body)) {
+    if (verifySchema('viewJobsLabour', req.body)) {
       dbConnection.query('SELECT DISTINCT vac_skills.vac_id FROM vac_skills JOIN lab_skills ON lab_skills.skills = vac_skills.skills WHERE lab_skills.user_email = ?', [req.body.user], (err2, vacancies) => {
         if (err2) next(err2);
         if (vacancies.length > 0) {
@@ -177,7 +178,7 @@ module.exports = (dbConnection) => {
     console.log(req.body);
     const insertQueries = [];
     const sId = uuidv4();
-    if (utils.verifySchema('searchVacancy', req.body)) {
+    if (verifySchema('searchVacancy', req.body)) {
       if (req.body.skills && req.body.location && req.body.company) {
         const skillArr = req.body.skills.split(', ');
         const locArr = req.body.location.split(', ');
@@ -276,7 +277,7 @@ module.exports = (dbConnection) => {
     console.log(req.body);
     const insertQueries = [];
     const sId = uuidv4();
-    if (utils.verifySchema('searchLabour', req.body)) {
+    if (verifySchema('searchLabour', req.body)) {
       if (req.body.skills && req.body.location) {
         const skillArr = req.body.skills.split(', ');
         const locArr = req.body.location.split(', ');
@@ -335,7 +336,7 @@ module.exports = (dbConnection) => {
 
   router.post('/viewLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (utils.verifySchema('viewLabour', req.body)) {
+    if (verifySchema('viewLabour', req.body)) {
       const sqlQuery1 = 'SELECT lab_skills.skills, lab_details.village, lab_details.city, lab_details.state FROM lab_skills JOIN lab_details ON lab_details.user_email = lab_skills.user_email WHERE lab_details.user_email = ?';
       dbConnection.query(sqlQuery1, [req.body.user], (err, users) => {
         if (err) next(err);
@@ -351,7 +352,7 @@ module.exports = (dbConnection) => {
   router.post('/updateMe', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     console.log(req.headers);
-    if (utils.verifySchema('updateMe', req.body)) {
+    if (verifySchema('updateMe', req.body)) {
       if (req.body.updateInfo) {
         dbConnection.query('UPDATE lab_details SET village = ?, city = ?, state = ? WHERE user_email = ?', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
           if (err) next(err);
@@ -398,7 +399,7 @@ module.exports = (dbConnection) => {
 
   router.post('/login', (req, res, next) => {
     console.log(req.body);
-    if (utils.verifySchema('login', req.body) {
+    if (verifySchema('login', req.body)) {
       dbConnection.query('SELECT * FROM user_accounts WHERE user_email = ?', [req.body.email], (err, user) => {
         console.log(user);
         if (err) {
@@ -433,7 +434,7 @@ module.exports = (dbConnection) => {
 
   // TODO
   router.post('/register', (req, res, next) => {
-    if (utils.verifySchema('register', req.body)) {
+    if (verifySchema('register', req.body)) {
       dbConnection.query(`SELECT user_email, username FROM user_accounts WHERE ( user_email='${req.body.email}' OR mobileNum='${req.body.mobile}')`, (err, user) => {
         console.log(user);
         if (user[0]) return res.json({ success: false, msg: 'User already Exists!', user: user[0].username });

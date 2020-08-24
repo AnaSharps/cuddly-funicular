@@ -1,10 +1,10 @@
-/* eslint-disable default-case */
 /* eslint-disable linebreak-style */
+/* eslint-disable default-case */
 /* eslint-disable max-len */
 /* eslint-disable react/jsx-filename-extension */
 import React from 'react';
 import {
-  Text, TextInput, Button, Dimensions, StyleSheet, View, Image, TouchableOpacity, Platform, StatusBar,
+  Text, TextInput, View, TouchableOpacity, StatusBar,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenContainer } from 'react-native-screens';
@@ -12,79 +12,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
-import utils from '../JWT/lib/utils';
+import styles from './cssStylesheet';
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#009387',
-  },
-  header: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 50,
-  },
-  footer: {
-    flex: 3,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 20,
-    paddingVertical: 30,
-  },
-  text_header: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 30,
-  },
-  text_footer: {
-    color: '#05375a',
-    fontSize: 18,
-  },
-  action: {
-    flexDirection: 'row',
-    marginTop: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f2f2f2',
-    paddingBottom: 5,
-  },
-  textInput: {
-    flex: 1,
-    marginTop: Platform.OS === 'ios' ? 0 : -12,
-    paddingLeft: 10,
-    color: '#05375a',
-  },
-  button: {
-    alignItems: 'center',
-    marginTop: 50,
-  },
-  signIn: {
-    width: '100%',
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  textSign: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  errorDisplay: {
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    height: Dimensions.get('screen').height * 0.05,
-    marginBottom: 50,
-    // paddingBottom: Dimensions.get('screen').height * 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textError: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
+const { verifySchema } = require('../JWT/lib/schemaVerifier');
 
 export default class SignIn extends React.Component {
   constructor(props) {
@@ -136,7 +66,7 @@ export default class SignIn extends React.Component {
   loginHandler() {
     const { navigation } = { ...this.props };
     const { email, password } = { ...this.state };
-    if (this.validateSchema({ email, password })) {
+    if (verifySchema('login', { email, password })) {
       fetch('https://976e3fc59bb0.ngrok.io/users/login', {
         method: 'POST',
         headers: {
@@ -171,7 +101,7 @@ export default class SignIn extends React.Component {
               });
               break;
             default:
-              //
+              // do nothing
           }
         } else {
           navigation.push('SignIn', {
@@ -179,13 +109,15 @@ export default class SignIn extends React.Component {
           });
         }
       });
-    }
+    } navigation.navigate('SignIn', {
+      error: 'Invalid Login Request',
+    });
   }
 
   render() {
     const { route, navigation } = { ...this.props };
     const { error } = route.params;
-    const { checkTextInput, secureTextEntry, password, errorEmail, errorPass } = { ...this.state };
+    const { checkTextInput, secureTextEntry, errorEmail, errorPass } = { ...this.state };
     return (
       <ScreenContainer style={styles.container}>
         <StatusBar backgroundColor="#009387" barStyle="light-content" />
@@ -202,7 +134,7 @@ export default class SignIn extends React.Component {
         </View>
         <Animatable.View
           animation="fadeInUpBig"
-          style={styles.footer}
+          style={styles.signInFooter}
         >
           <Text style={styles.text_footer}>Email</Text>
           {errorEmail ? (
