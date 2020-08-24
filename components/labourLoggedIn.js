@@ -35,7 +35,7 @@ export default class LabourLoggedIn extends React.Component {
     const {
       userSkills, userVillage, userCity, userState,
     } = { ...this.state };
-    fetch('https://976e3fc59bb0.ngrok.io/users/protected', {
+    fetch('https://976e3fc59bb0.ngrok.io/users/updateMe', {
       method: 'POST',
       headers: {
         Authorization: token,

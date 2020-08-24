@@ -34,7 +34,6 @@ export default class ViewMe extends React.Component {
       body: JSON.stringify({
         user,
         userType,
-        getInfo: true,
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {

@@ -14,7 +14,7 @@ module.exports = (dbConnection) => {
 
   router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (req.body.user && req.body.vacancyId) {
+    if (utils.verifySchema('viewApplications', req.body).success) {
       dbConnection.query('SELECT DISTINCT vac_id FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacId) => {
         if (err) next(err);
         if (vacId.length > 0) {
@@ -38,7 +38,7 @@ module.exports = (dbConnection) => {
           } else res.status(200).json({ success: false, msg: 'Unauthorized Request' });
         } else res.status(200).json({ success: false, msg: 'No vacancies found' });
       });
-    }
+    } return res.status(401).json({ success: false, msg: 'Malformed Request' });
   });
 
   // router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
@@ -58,7 +58,7 @@ module.exports = (dbConnection) => {
 
   router.post('/createVacancy', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (req.body.user && req.body.userType === 'employer' && req.body.vacancy && req.body.userVillage && req.body.userCity && req.body.userState && req.body.userSkills && req.body.jobDesc && req.body.jobName) {
+    if (utils.verifySchema('createVacancy', req.body)) {
       console.log('valid request');
       const vacId = uuidv4();
       dbConnection.query('INSERT INTO vac_details (job_desc, vacancy, village, city, state, vac_id, vac_name, user_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [req.body.jobDesc, req.body.vacancy, req.body.userVillage, req.body.userCity, req.body.userState, vacId, req.body.jobName, req.body.user], (err, user) => {
@@ -80,7 +80,7 @@ module.exports = (dbConnection) => {
   });
 
   router.post('/applyforJob', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (req.body.user && req.body.vacancyId) {
+    if (utils.verifySchema('applyforJob', req.body)) {
       dbConnection.query('SELECT applicant_email FROM vac_applications WHERE applicant_email = ? AND vac_id = ?', [req.body.user, req.body.vacancyId], (err1, applicant) => {
         if (err1) next(err1);
         if (applicant.length > 0) res.status(200).json({ success: false, msg: 'You have already applied for this job' });
@@ -110,11 +110,11 @@ module.exports = (dbConnection) => {
           });
         }
       });
-    }
+    } return res.status(401).json({ success: false, msg: 'Malformed Request' });
   });
 
   router.post('/withdrawJob', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (req.body.user && req.body.vacancyId) {
+    if (utils.verifySchema('withdrawJob', req.body)) {
       dbConnection.query('SELECT applicant_email FROM vac_applications WHERE vac_id = ?', [req.body.vacancyId], (err, applicant) => {
         if (err) next(err);
         if (applicant.length > 0) {
@@ -122,24 +122,24 @@ module.exports = (dbConnection) => {
             if (err2) next(err2);
             res.status(200).json({ success: true, msg: 'Aplpication withdrawn' });
           });
-        } else res.status(200).json({ success: false, msg: 'You have not applied for this job' });
+        } else res.status(401).json({ success: false, msg: 'You have not applied for this job' });
       });
     }
   });
 
   router.post('/viewVacancies', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (req.body.user) {
+    if (req.body.user && req.body.userType === 'employer') {
       dbConnection.query('SELECT DISTINCT vac_id, vac_name FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacancies) => {
         if (err) next(err);
         if (vacancies.length > 0) {
           res.status(200).json({ success: true, vacancies, msg: 'Vacancies found' });
         } else res.status(200).json({ success: false, msg: 'You have no current vacancy' });
       });
-    }
+    } res.status(401).json({ success: false, msg: 'Malformed Request' });
   });
 
   router.post('/viewJobsLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (req.body.viewJobs) {
+    if (utils.verifySchema('viewJobsLabour', req.body)) {
       dbConnection.query('SELECT DISTINCT vac_skills.vac_id FROM vac_skills JOIN lab_skills ON lab_skills.skills = vac_skills.skills WHERE lab_skills.user_email = ?', [req.body.user], (err2, vacancies) => {
         if (err2) next(err2);
         if (vacancies.length > 0) {
@@ -170,71 +170,73 @@ module.exports = (dbConnection) => {
           });
         } else res.status(200).json({ success: false, msg: 'Sorry no matching jobs found!' });
       });
-    }
+    } res.status(401).json({ success: false, msg: 'Malformed Request' });
   });
 
   router.post('/searchVacancy', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     const insertQueries = [];
     const sId = uuidv4();
-    if (req.body.skills && req.body.location && req.body.company) {
-      const skillArr = req.body.skills.split(', ');
-      const locArr = req.body.location.split(', ');
-      const companyArr = req.body.company.split(', ');
-      skillArr.forEach((skillVal) => {
+    if (utils.verifySchema('searchVacancy', req.body)) {
+      if (req.body.skills && req.body.location && req.body.company) {
+        const skillArr = req.body.skills.split(', ');
+        const locArr = req.body.location.split(', ');
+        const companyArr = req.body.company.split(', ');
+        skillArr.forEach((skillVal) => {
+          locArr.forEach((locVal) => {
+            companyArr.forEach((compVal) => {
+              const insertQuery = query('INSERT INTO search_lab (searchId, skills, company, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?, ?)', [sId, skillVal, compVal, locVal, locVal, locVal, req.body.user]);
+              insertQueries.push(insertQuery);
+            });
+          });
+        });
+      } else if (req.body.skills && !req.body.location && !req.body.company) {
+        const skillArr = req.body.skills.split(', ');
+        skillArr.forEach((skillVal) => {
+          const insertQuery = query('INSERT INTO search_lab (searchId, skills, user_email) VALUES (?, ?, ?)', [sId, skillVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
+      } else if (req.body.location && !req.body.skills && !req.body.company) {
+        const locArr = req.body.location.split(', ');
         locArr.forEach((locVal) => {
-          companyArr.forEach((compVal) => {
-            const insertQuery = query('INSERT INTO search_lab (searchId, skills, company, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?, ?)', [sId, skillVal, compVal, locVal, locVal, locVal, req.body.user]);
+          const insertQuery = query('INSERT INTO search_lab (searchId, village, city, state, user_email) VALUES (?, ?, ?, ?, ?)', [sId, locVal, locVal, locVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
+      } else if (req.body.company && !req.body.skills && !req.body.location) {
+        const compArr = req.body.company.split(', ');
+        compArr.forEach((compVal) => {
+          const insertQuery = query('INSERT INTO search_lab (searchId, company, user_email) VALUES (?, ?, ?, ?, ?)', [sId, compVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
+      } else if (req.body.skills && req.body.location && !req.body.company) {
+        const skillArr = req.body.skills.split(', ');
+        const locArr = req.body.location.split(', ');
+        skillArr.forEach((skillVal) => {
+          locArr.forEach((locVal) => {
+            const insertQuery = query('INSERT INTO search_lab (searchId, skills, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, locVal, locVal, locVal, req.body.user]);
             insertQueries.push(insertQuery);
           });
         });
-      });
-    } else if (req.body.skills && !req.body.location && !req.body.company) {
-      const skillArr = req.body.skills.split(', ');
-      skillArr.forEach((skillVal) => {
-        const insertQuery = query('INSERT INTO search_lab (searchId, skills, user_email) VALUES (?, ?, ?)', [sId, skillVal, req.body.user]);
-        insertQueries.push(insertQuery);
-      });
-    } else if (req.body.location && !req.body.skills && !req.body.company) {
-      const locArr = req.body.location.split(', ');
-      locArr.forEach((locVal) => {
-        const insertQuery = query('INSERT INTO search_lab (searchId, village, city, state, user_email) VALUES (?, ?, ?, ?, ?)', [sId, locVal, locVal, locVal, req.body.user]);
-        insertQueries.push(insertQuery);
-      });
-    } else if (req.body.company && !req.body.skills && !req.body.location) {
-      const compArr = req.body.company.split(', ');
-      compArr.forEach((compVal) => {
-        const insertQuery = query('INSERT INTO search_lab (searchId, company, user_email) VALUES (?, ?, ?, ?, ?)', [sId, compVal, req.body.user]);
-        insertQueries.push(insertQuery);
-      });
-    } else if (req.body.skills && req.body.location && !req.body.company) {
-      const skillArr = req.body.skills.split(', ');
-      const locArr = req.body.location.split(', ');
-      skillArr.forEach((skillVal) => {
+      } else if (req.body.skills && req.body.company && !req.body.location) {
+        const skillArr = req.body.skills.split(', ');
+        const compArr = req.body.company.split(', ');
+        skillArr.forEach((skillVal) => {
+          compArr.forEach((compVal) => {
+            const insertQuery = query('INSERT INTO search_lab (searchId, skills, company, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, compVal, req.body.user]);
+            insertQueries.push(insertQuery);
+          });
+        });
+      } else if (req.body.location && req.body.company && !req.body.skills) {
+        const compArr = req.body.company.split(', ');
+        const locArr = req.body.location.split(', ');
         locArr.forEach((locVal) => {
-          const insertQuery = query('INSERT INTO search_lab (searchId, skills, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, locVal, locVal, locVal, req.body.user]);
-          insertQueries.push(insertQuery);
+          compArr.forEach((compVal) => {
+            const insertQuery = query('INSERT INTO search_lab (searchId, company, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, compVal, locVal, locVal, locVal, req.body.user]);
+            insertQueries.push(insertQuery);
+          });
         });
-      });
-    } else if (req.body.skills && req.body.company && !req.body.location) {
-      const skillArr = req.body.skills.split(', ');
-      const compArr = req.body.company.split(', ');
-      skillArr.forEach((skillVal) => {
-        compArr.forEach((compVal) => {
-          const insertQuery = query('INSERT INTO search_lab (searchId, skills, company, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, compVal, req.body.user]);
-          insertQueries.push(insertQuery);
-        });
-      });
-    } else if (req.body.location && req.body.company && !req.body.skills) {
-      const compArr = req.body.company.split(', ');
-      const locArr = req.body.location.split(', ');
-      locArr.forEach((locVal) => {
-        compArr.forEach((compVal) => {
-          const insertQuery = query('INSERT INTO search_lab (searchId, company, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, compVal, locVal, locVal, locVal, req.body.user]);
-          insertQueries.push(insertQuery);
-        });
-      });
-    } else res.status(400).json({ success: false, msg: 'Bad Request' });
+      } else res.status(401).json({ success: false, msg: 'Bad Request' });
+    } else res.status(401).json({ success: false, msg: 'Malformed Request' });
     Promise.allSettled(insertQueries).then((val) => {
       console.log(val);
       const sql = `SELECT DISTINCT ${req.body.skills ? 'vac_skills' : 'vac_details'}.vac_id FROM ${req.body.skills ? 'vac_skills JOIN search_lab ON vac_skills.skills = search_lab.skills' : ''} ${req.body.skills && req.body.location ? 'JOIN vac_details ON (vac_details.village = search_lab.village OR vac_details.city = search_lab.city OR vac_details.state = search_lab.state)' : ''} ${req.body.skills && req.body.location && req.body.company ? 'AND vac_details.vac_name = search_lab.company' : ''} ${req.body.skills && !req.body.location && req.body.company ? 'JOIN search_lab ON vac_details.vac_name = search_lab.company' : ''} ${!req.body.skills && req.body.location ? 'vac_details JOIN search_lab ON (vac_details.village = search_lab.village OR vac_details.city = search_lab.city OR vac_details.state = search_lab.state)' : ''} ${!req.body.skills && req.body.location && req.body.company ? 'AND vac_details.vac_name = search_lab.company' : ''} ${!req.body.skills && !req.body.location && req.body.company ? 'vac_details JOIN search_lab ON vac_details.vac_name = search_lab.company' : ''} WHERE search_lab.searchId = ?`;
@@ -274,28 +276,30 @@ module.exports = (dbConnection) => {
     console.log(req.body);
     const insertQueries = [];
     const sId = uuidv4();
-    if (req.body.skills && req.body.location) {
-      const skillArr = req.body.skills.split(', ');
-      const locArr = req.body.location.split(', ');
-      skillArr.forEach((skillVal) => {
-        locArr.forEach((locVal) => {
-          const insertQuery = query('INSERT INTO search_vac (searchId, skills, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, locVal, locVal, locVal, req.body.user]);
+    if (utils.verifySchema('searchLabour', req.body)) {
+      if (req.body.skills && req.body.location) {
+        const skillArr = req.body.skills.split(', ');
+        const locArr = req.body.location.split(', ');
+        skillArr.forEach((skillVal) => {
+          locArr.forEach((locVal) => {
+            const insertQuery = query('INSERT INTO search_vac (searchId, skills, village, city, state, user_email) VALUES (?, ?, ?, ?, ?, ?)', [sId, skillVal, locVal, locVal, locVal, req.body.user]);
+            insertQueries.push(insertQuery);
+          });
+        });
+      } else if (req.body.skills) {
+        const skillArr = req.body.skills.split(', ');
+        skillArr.forEach((skillVal) => {
+          const insertQuery = query('INSERT INTO search_vac (searchId, skills, user_email) VALUES (?, ?, ?)', [sId, skillVal, req.body.user]);
           insertQueries.push(insertQuery);
         });
-      });
-    } else if (req.body.skills) {
-      const skillArr = req.body.skills.split(', ');
-      skillArr.forEach((skillVal) => {
-        const insertQuery = query('INSERT INTO search_vac (searchId, skills, user_email) VALUES (?, ?, ?)', [sId, skillVal, req.body.user]);
-        insertQueries.push(insertQuery);
-      });
-    } else if (req.body.location) {
-      const locArr = req.body.location.split(', ');
-      locArr.forEach((locVal) => {
-        const insertQuery = query('INSERT INTO search_vac (searchId, village, city, state, user_email) VALUES (?, ?, ?, ?, ?)', [sId, locVal, locVal, locVal, req.body.user]);
-        insertQueries.push(insertQuery);
-      });
-    } else res.status(400).json({ success: false, msg: 'Bad Request' });
+      } else if (req.body.location) {
+        const locArr = req.body.location.split(', ');
+        locArr.forEach((locVal) => {
+          const insertQuery = query('INSERT INTO search_vac (searchId, village, city, state, user_email) VALUES (?, ?, ?, ?, ?)', [sId, locVal, locVal, locVal, req.body.user]);
+          insertQueries.push(insertQuery);
+        });
+      } else res.status(401).json({ success: false, msg: 'Bad Request' });
+    } else res.status(401).json({ success: false, msg: 'Malformed Request' });
     Promise.allSettled(insertQueries).then(() => {
       const sql = `SELECT DISTINCT ${req.body.skills ? 'lab_skills' : 'lab_details'}.user_email FROM ${req.body.skills ? 'lab_skills JOIN search_vac ON lab_skills.skills = search_vac.skills' : ''} ${req.body.skills && req.body.location ? 'JOIN lab_details ON (lab_details.village = search_vac.village OR lab_details.city = search_vac.city OR lab_details.state = search_vac.state)' : ''} ${!req.body.skills && req.body.location ? 'lab_details JOIN search_vac ON (lab_details.village = search_vac.village OR lab_details.city = search_vac.city OR lab_details.state = search_vac.state)' : ''} WHERE search_vac.searchId = ?`;
       dbConnection.query(sql, [sId], (err, userEmails) => {
@@ -330,21 +334,9 @@ module.exports = (dbConnection) => {
   });
 
   router.post('/viewLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (req.body.getInfo) {
-      console.log(req.body);
-      let sqlQuery1;
-      switch (req.body.userType) {
-        case 'labour':
-          console.log('labour identified');
-          sqlQuery1 = 'SELECT lab_skills.skills, lab_details.village, lab_details.city, lab_details.state FROM lab_skills JOIN lab_details ON lab_details.user_email = lab_skills.user_email WHERE lab_details.user_email = ?';
-          break;
-        case 'employer':
-          sqlQuery1 = '';
-          sqlQuery2 = '';
-          break;
-        default:
-          // do nothing
-      }
+    console.log(req.body);
+    if (utils.verifySchema('viewLabour', req.body)) {
+      const sqlQuery1 = 'SELECT lab_skills.skills, lab_details.village, lab_details.city, lab_details.state FROM lab_skills JOIN lab_details ON lab_details.user_email = lab_skills.user_email WHERE lab_details.user_email = ?';
       dbConnection.query(sqlQuery1, [req.body.user], (err, users) => {
         if (err) next(err);
         if (users) {
@@ -353,66 +345,60 @@ module.exports = (dbConnection) => {
           return res.status(200).json({ success: true, users, msg: 'Thank you for your details!' });
         }
       });
-    }
+    } else res.status(401).json({ success: false, msg: 'Malformed request' });
   });
 
-  router.post('/protected', passport.authenticate('jwt', { session: false }), (req, res, next) => {
+  router.post('/updateMe', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     console.log(req.headers);
-    switch (req.body.userType) {
-      case 'labour':
-        if (req.body.user && req.body.userVillage && req.body.userCity && req.body.userState && req.body.userSkills) {
-          if (req.body.updateInfo) {
-            dbConnection.query('UPDATE lab_details SET village = ?, city = ?, state = ? WHERE user_email = ?', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
-              if (err) next(err);
-              if (user) {
-                dbConnection.query('DELETE FROM lab_skills WHERE user_email = ?', [req.body.user], (err2, user2) => {
-                  if (err2) next(err2);
-                  if (user2) {
-                    for (let i = 0; i < req.body.userSkills.length; i += 1) {
-                      dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
-                        if (error) next(error);
-                        if (User) {
-                          console.log(`${req.body.userSkills[i]} updated`);
-                        }
-                      });
+    if (utils.verifySchema('updateMe', req.body)) {
+      if (req.body.updateInfo) {
+        dbConnection.query('UPDATE lab_details SET village = ?, city = ?, state = ? WHERE user_email = ?', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
+          if (err) next(err);
+          if (user) {
+            dbConnection.query('DELETE FROM lab_skills WHERE user_email = ?', [req.body.user], (err2, user2) => {
+              if (err2) next(err2);
+              if (user2) {
+                for (let i = 0; i < req.body.userSkills.length; i += 1) {
+                  dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
+                    if (error) next(error);
+                    if (User) {
+                      console.log(`${req.body.userSkills[i]} updated`);
                     }
-                  }
-                });
-                return res.status(200).json({ success: true, msg: 'Your details have been updated!' });
+                  });
+                }
               }
             });
-          } else {
-            dbConnection.query('INSERT INTO lab_details (village, city, state, user_email) VALUES (?, ?, ?, ?)', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
-              if (err) next(err);
-              if (user) {
-                dbConnection.query('UPDATE user_accounts SET details = ? WHERE user_email = ?', [req.body.details, req.body.user], (err2, user2) => {
-                  if (err2) next(err2);
-                  if (user2) {
-                    for (let i = 0; i < req.body.userSkills.length; i += 1) {
-                      dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
-                        if (error) next(error);
-                        if (User) {
-                          console.log(`${req.body.userSkills[i]} added`);
-                        }
-                      });
-                    }
-                  }
-                });
-                return res.status(200).json({ success: true, msg: 'Thank you for your details!' });
-              }
-            });
+            return res.status(200).json({ success: true, msg: 'Your details have been updated!' });
           }
-        } else return res.status(401).json({ success: false, msg: 'Malformed Request' });
-        break;
-      default:
-        // do nothing
-    }
+        });
+      } else {
+        dbConnection.query('INSERT INTO lab_details (village, city, state, user_email) VALUES (?, ?, ?, ?)', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
+          if (err) next(err);
+          if (user) {
+            dbConnection.query('UPDATE user_accounts SET details = ? WHERE user_email = ?', [req.body.details, req.body.user], (err2, user2) => {
+              if (err2) next(err2);
+              if (user2) {
+                for (let i = 0; i < req.body.userSkills.length; i += 1) {
+                  dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
+                    if (error) next(error);
+                    if (User) {
+                      console.log(`${req.body.userSkills[i]} added`);
+                    }
+                  });
+                }
+              }
+            });
+            return res.status(200).json({ success: true, msg: 'Thank you for your details!' });
+          }
+        });
+      }
+    } else return res.status(401).json({ success: false, msg: 'Malformed Request' });
   });
 
   router.post('/login', (req, res, next) => {
     console.log(req.body);
-    if (utils.validateSchema({ login: { email: req.body.email, password: req.body.password } }).success) {
+    if (utils.verifySchema('login', req.body) {
       dbConnection.query('SELECT * FROM user_accounts WHERE user_email = ?', [req.body.email], (err, user) => {
         console.log(user);
         if (err) {
@@ -447,11 +433,7 @@ module.exports = (dbConnection) => {
 
   // TODO
   router.post('/register', (req, res, next) => {
-    if (utils.validateSchema({
-      register: {
-        email: req.body.email, username: req.body.username, mobile: req.body.mobile, password: req.body.password, userType: req.body.userType, details: req.body.details,
-      },
-    })) {
+    if (utils.verifySchema('register', req.body)) {
       dbConnection.query(`SELECT user_email, username FROM user_accounts WHERE ( user_email='${req.body.email}' OR mobileNum='${req.body.mobile}')`, (err, user) => {
         console.log(user);
         if (user[0]) return res.json({ success: false, msg: 'User already Exists!', user: user[0].username });

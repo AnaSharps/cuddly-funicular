@@ -31,6 +31,7 @@ export default class ViewVacancies extends React.Component {
       },
       body: JSON.stringify({
         user,
+        userType: 'employer',
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {

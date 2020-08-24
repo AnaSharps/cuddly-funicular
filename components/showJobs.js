@@ -34,7 +34,6 @@ export default class ShowJobs extends React.Component {
       body: JSON.stringify({
         user,
         userType: 'labour',
-        viewJobs: true,
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {
