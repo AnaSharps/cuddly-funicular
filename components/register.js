@@ -14,6 +14,7 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import styles from './cssStylesheet';
+import AuthContext from './AuthContext';
 
 const { verifySchema } = require('../JWT/lib/schemaVerifier');
 
@@ -41,6 +42,7 @@ export default class Register extends React.Component {
       { label: 'Admin', value: 2 },
     ];
   }
+  static contextType = AuthContext;
 
   textInputChange({
     username, email, mobile, confirmPass, passwordInp,
@@ -159,6 +161,7 @@ export default class Register extends React.Component {
     const {
       username, password, mobile, userType, email, passwordMatch,
     } = { ...this.state };
+    const { signIn } = this.context;
     if (verifySchema('register', {
       username,
       email,
@@ -185,26 +188,7 @@ export default class Register extends React.Component {
         if (json.success) {
           const authToken = JSON.stringify(json);
           SecureStore.setItemAsync('authToken', authToken);
-          switch (json.userType) {
-            case 'labour':
-              navigation.navigate('LabourLoggedIn', {
-                user: json.user,
-                details: json.details,
-                token: json.token,
-                error: null,
-              });
-              break;
-            case 'employer':
-              navigation.navigate('EmployerLoggedIn', {
-                user: json.user,
-                token: json.token,
-                createVacancy: false,
-                error: null,
-              });
-              break;
-            default:
-            //
-          }
+          signIn({ token: json.token, userType: json.userType, user: json.user, details: json.details });
         } else if (json.msg === 'User already Exists!') {
           navigation.navigate('WelcomeLogin', { error: `Login as ${json.user}!` });
         } else navigation.navigate('Register', { error: json.msg });

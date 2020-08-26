@@ -121,6 +121,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  searchBarContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#C0C0C0',
+    borderRadius: 10,
+    height: '20%',
+    width: '95%',
+  },
+  searchBarTextInput: {
+    marginTop: 5,
+    paddingHorizontal: 5,
+    width: '100%',
+    borderBottomColor: 'black',
+    borderBottomWidth: 1,
+  },
+  searchBarCard: {
+    width: '95%',
+    height: '20%',
+    padding: 5,
+    backgroundColor: '#fff',
+    marginBottom: 5,
+    opacity: 0.85,
+    borderRadius: 5,
+    // marginHorizontal: 5,
+  },
 });
 
 export default styles;

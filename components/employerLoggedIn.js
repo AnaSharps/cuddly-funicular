@@ -8,6 +8,7 @@ import {
 import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
+import AuthContext from './AuthContext';
 
 export default class EmployerLoggedIn extends React.Component {
   constructor(props) {
@@ -28,6 +29,7 @@ export default class EmployerLoggedIn extends React.Component {
     };
     this.createVacancyHandler = this.createVacancyHandler.bind(this);
   }
+  static contextType = AuthContext;
 
   createVacancyHandler() {
     const { route, navigation } = { ...this.props };
@@ -116,6 +118,7 @@ export default class EmployerLoggedIn extends React.Component {
     const {
       userVillage, userCity, userState, vacancy, jobDesc, jobName, userSkills, skillNum, searchResults, searchHappened,
     } = { ...this.state };
+    const { signOut } = this.context;
     return (
       <ScreenContainer>
         {error && (
@@ -215,7 +218,7 @@ export default class EmployerLoggedIn extends React.Component {
             title="Logout"
             onPress={() => {
               SecureStore.deleteItemAsync('authToken');
-              navigation.navigate('WelcomeLogin', { error: 'You have Successfully Logged Out!' });
+              signOut();
             }}
           />
         </>

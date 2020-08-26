@@ -1,11 +1,16 @@
+/* eslint-disable linebreak-style */
 /* eslint-disable max-len */
 /* eslint-disable react/jsx-filename-extension */
-/* eslint-disable linebreak-style */
-import React from 'react';
-import { TextInput, Button, Text, Linking, View } from 'react-native';
+import React, { useContext } from 'react';
+import {
+  TextInput, Button, Text, Linking, View,
+} from 'react-native';
 import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
+import * as Animatable from 'react-native-animatable';
+import styles from './cssStylesheet';
+import AuthContext from './AuthContext';
 
 export default class LabourLoggedIn extends React.Component {
   constructor(props) {
@@ -26,6 +31,7 @@ export default class LabourLoggedIn extends React.Component {
     this.updateDetails = true;
     this.sendUpdate = null;
   }
+  static contextType = AuthContext;
 
   applicationHandler() {
     const { route, navigation } = { ...this.props };
@@ -109,6 +115,7 @@ export default class LabourLoggedIn extends React.Component {
     const {
       userVillage, userCity, userState, userSkills, skillNum, searchHappened, searchResults,
     } = { ...this.state };
+    const { signOut } = this.context;
     if (userDetails && skillList && this.updateDetails) {
       const skillSet = skillList.split(':');
       const skillNumDup = [uuid.v4()];
@@ -121,19 +128,36 @@ export default class LabourLoggedIn extends React.Component {
       });
     }
     return (
-      <ScreenContainer>
+      <ScreenContainer style={{
+        ...styles.container,
+        // justifyContent: 'center',
+        alignItems: 'center',
+      }}
+      >
         {error && (
           <Text>{error}</Text>
         )}
-        <TextInput placeholder="Search skills" onChangeText={(e) => this.setState({ searchInput: e })} />
-        <TextInput placeholder="Search Companies" onChangeText={(e) => this.setState({ companyInput: e })} />
-        <TextInput placeholder="Search locations" onChangeText={(e) => this.setState({ locationInput: e })} />
-        <Button
-          title="Search"
-          onPress={() => {
-            this.searchHandler();
-          }}
-        />
+        <Animatable.View
+          animation="bounceIn"
+          duration={2000}
+          style={styles.searchBarContainer}
+        >
+          <View style={styles.searchBarCard}>
+            <TextInput style={styles.searchBarTextInput} placeholder="Search skills" onChangeText={(e) => this.setState({ searchInput: e })} />
+          </View>
+          <View style={styles.searchBarCard}>
+            <TextInput style={styles.searchBarTextInput} placeholder="Search Companies" onChangeText={(e) => this.setState({ companyInput: e })} />
+          </View>
+          <View style={styles.searchBarCard}>
+            <TextInput style={styles.searchBarTextInput} placeholder="Search locations" onChangeText={(e) => this.setState({ locationInput: e })} />
+          </View>
+          <Button
+            title="Search"
+            onPress={() => {
+              this.searchHandler();
+            }}
+          />
+        </Animatable.View>
         {searchHappened === 1 && (
           <Text>Retrieving vacancies...</Text>
         )}
@@ -233,6 +257,13 @@ export default class LabourLoggedIn extends React.Component {
                 this.updateDetails = true;
               }
               this.applicationHandler();
+            }}
+          />
+          <Button
+            title="Logout"
+            onPress={() => {
+              SecureStore.deleteItemAsync('authToken');
+              signOut();
             }}
           />
         </>

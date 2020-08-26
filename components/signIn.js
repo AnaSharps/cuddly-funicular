@@ -13,6 +13,7 @@ import * as Animatable from 'react-native-animatable';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
 import styles from './cssStylesheet';
+import AuthContext from './AuthContext';
 
 const { verifySchema } = require('../JWT/lib/schemaVerifier');
 
@@ -28,6 +29,7 @@ export default class SignIn extends React.Component {
       errorEmail: '',
     };
   }
+  static contextType = AuthContext;
 
   textInputChange(val) {
     if (typeof val === 'string' && val.length > 0 && val.length <= 50 && val.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) === 0) {
@@ -66,6 +68,7 @@ export default class SignIn extends React.Component {
   loginHandler() {
     const { navigation } = { ...this.props };
     const { email, password } = { ...this.state };
+    const { signIn } = this.context;
     if (verifySchema('login', { email, password })) {
       fetch('https://976e3fc59bb0.ngrok.io/users/login', {
         method: 'POST',
@@ -81,37 +84,18 @@ export default class SignIn extends React.Component {
         if (json.success) {
           const authToken = JSON.stringify(json);
           SecureStore.setItemAsync('authToken', authToken);
-          switch (json.userType) {
-            case 'labour':
-              navigation.navigate('LabourLoggedIn', {
-                user: json.user,
-                userType: 'labour',
-                details: json.details,
-                token: json.token,
-                error: null,
-              });
-              break;
-            case 'employer':
-              navigation.navigate('EmployerLoggedIn', {
-                user: json.user,
-                userType: 'employer',
-                token: json.token,
-                createVacancy: false,
-                error: null,
-              });
-              break;
-            default:
-              // do nothing
-          }
+          signIn({ token: json.token, userType: json.userType, user: json.user, details: json.details });
         } else {
           navigation.push('SignIn', {
             error: json.msg,
           });
         }
       });
-    } navigation.navigate('SignIn', {
-      error: 'Invalid Login Request',
-    });
+    } else {
+      navigation.navigate('SignIn', {
+        error: 'Invalid Login Request',
+      });
+    }
   }
 
   render() {
