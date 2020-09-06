@@ -24,6 +24,6 @@ app.use(cors());
 
 app.use(require('../JWT/routes')(connection));
 
-app.listen(2000, () => {
+app.listen(3100, () => {
   console.log('listening on *:3000');
 });
