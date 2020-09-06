@@ -18,6 +18,8 @@ import ViewVacancies from './components/viewVacancies';
 import ViewApplicants from './components/viewApplicants';
 import SignIn from './components/signIn';
 import AuthContext from './components/AuthContext';
+
+const { host } = require('./components/host');
 // SignIn.contextType = AuthContext;
 // Register.contextType = AuthContext;
 // LabourLoggedIn.contextType = AuthContext;
@@ -109,7 +111,11 @@ export default function App({ navigation }) {
   return (
     <AuthContext.Provider value={authContext}>
       <NavigationContainer>
-        <Stack.Navigator>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
           {state.isLoading && (
             <Stack.Screen name="Splash" component={SplashScreen} />
           )}

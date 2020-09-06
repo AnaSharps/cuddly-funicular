@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenContainer } from 'react-native-screens';
+const { host } = require('./host');
 
 export default class ViewApplicants extends React.Component {
   constructor(props) {
@@ -21,7 +22,7 @@ export default class ViewApplicants extends React.Component {
   componentDidMount() {
     const { route, navigation } = { ...this.props };
     const { user, token, vacancyId } = route.params;
-    fetch('https://976e3fc59bb0.ngrok.io/users/viewApplications', {
+    fetch(`${host}/users/viewApplications`, {
       method: 'POST',
       headers: {
         Authorization: token,

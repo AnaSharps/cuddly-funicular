@@ -9,6 +9,7 @@ import {
 import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
+const { host } = require('./host');
 
 export default class ShowJobs extends React.Component {
   constructor(props) {
@@ -24,7 +25,7 @@ export default class ShowJobs extends React.Component {
   componentDidMount() {
     const { route, navigation } = { ...this.props };
     const { token, user } = route.params;
-    fetch('https://976e3fc59bb0.ngrok.io/users/viewJobsLabour', {
+    fetch(`${host}/users/viewJobsLabour`, {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -49,7 +50,7 @@ export default class ShowJobs extends React.Component {
   applyForJob(vacancyId) {
     const { route, navigation } = { ...this.props };
     const { token, user } = route.params;
-    fetch('https://976e3fc59bb0.ngrok.io/users/applyforJob', {
+    fetch(`${host}/users/applyforJob`, {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -79,7 +80,7 @@ export default class ShowJobs extends React.Component {
   withdrawApplicationHandler(vacancyId) {
     const { route, navigation } = { ...this.props };
     const { token, user } = route.params;
-    fetch('https://976e3fc59bb0.ngrok.io/users/withdrawJob', {
+    fetch(`${host}/users/withdrawJob`, {
       method: 'POST',
       headers: {
         Authorization: token,

@@ -14,6 +14,7 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
 import styles from './cssStylesheet';
 import AuthContext from './AuthContext';
+const { host } = require('./host');
 
 const { verifySchema } = require('../JWT/lib/schemaVerifier');
 
@@ -70,7 +71,7 @@ export default class SignIn extends React.Component {
     const { email, password } = { ...this.state };
     const { signIn } = this.context;
     if (verifySchema('login', { email, password })) {
-      fetch('https://976e3fc59bb0.ngrok.io/users/login', {
+      fetch(`${host}/users/login`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',

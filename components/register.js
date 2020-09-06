@@ -15,6 +15,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import styles from './cssStylesheet';
 import AuthContext from './AuthContext';
+const { host } = require('./host');
 
 const { verifySchema } = require('../JWT/lib/schemaVerifier');
 
@@ -170,7 +171,7 @@ export default class Register extends React.Component {
       userType,
       details: 0,
     }) && passwordMatch) {
-      fetch('https://976e3fc59bb0.ngrok.io/users/register', {
+      fetch(`${host}/users/register`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',

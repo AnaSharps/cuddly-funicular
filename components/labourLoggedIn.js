@@ -11,6 +11,7 @@ import uuid from 'react-native-uuid';
 import * as Animatable from 'react-native-animatable';
 import styles from './cssStylesheet';
 import AuthContext from './AuthContext';
+const { host } = require('./host');
 
 export default class LabourLoggedIn extends React.Component {
   constructor(props) {
@@ -41,7 +42,7 @@ export default class LabourLoggedIn extends React.Component {
     const {
       userSkills, userVillage, userCity, userState,
     } = { ...this.state };
-    fetch('https://976e3fc59bb0.ngrok.io/users/updateMe', {
+    fetch(`${host}/users/updateMe`, {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -78,7 +79,7 @@ export default class LabourLoggedIn extends React.Component {
     } = route.params;
     const { searchInput, locationInput, companyInput } = { ...this.state };
     this.setState({ searchHappened: 1 });
-    fetch('https://976e3fc59bb0.ngrok.io/users/searchVacancy', {
+    fetch(`${host}/users/searchVacancy`, {
       method: 'POST',
       headers: {
         Authorization: token,

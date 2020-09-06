@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
+const { host } = require('./host');
 
 export default class ViewMe extends React.Component {
   constructor(props) {
@@ -24,7 +25,7 @@ export default class ViewMe extends React.Component {
     const {
       user, userType, token,
     } = route.params;
-    fetch('https://976e3fc59bb0.ngrok.io/users/viewLabour', {
+    fetch(`${host}/users/viewLabour`, {
       method: 'POST',
       headers: {
         Authorization: token,

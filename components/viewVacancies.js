@@ -10,6 +10,8 @@ import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
 
+const { host } = require('./host');
+
 export default class ViewVacancies extends React.Component {
   constructor(props) {
     super(props);
@@ -22,7 +24,7 @@ export default class ViewVacancies extends React.Component {
   componentDidMount() {
     const { route, navigation } = { ...this.props };
     const { user, token } = route.params;
-    fetch('https://976e3fc59bb0.ngrok.io/users/viewVacancies', {
+    fetch(`${host}/users/viewVacancies`, {
       method: 'POST',
       headers: {
         Authorization: token,

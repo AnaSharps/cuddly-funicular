@@ -9,6 +9,8 @@ import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
 import AuthContext from './AuthContext';
+const { host } = require('./host');
+import styles from './cssStylesheet';
 
 export default class EmployerLoggedIn extends React.Component {
   constructor(props) {
@@ -39,7 +41,7 @@ export default class EmployerLoggedIn extends React.Component {
     const {
       userSkills, userVillage, userCity, userState, vacancy, jobDesc, jobName,
     } = { ...this.state };
-    fetch('https://976e3fc59bb0.ngrok.io/users/createVacancy', {
+    fetch(`${host}/users/createVacancy`, {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -82,7 +84,7 @@ export default class EmployerLoggedIn extends React.Component {
     } = route.params;
     const { searchInput, locationInput } = { ...this.state };
     this.setState({ searchHappened: 1 });
-    fetch('https://976e3fc59bb0.ngrok.io/users/searchLabour', {
+    fetch(`${host}/users/searchLabour`, {
       method: 'POST',
       headers: {
         Authorization: token,
