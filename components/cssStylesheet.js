@@ -5,6 +5,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#009387',
+    height: '100%',
+    width: '100%',
   },
   welcomeHeader: {
     flex: 2,
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
     color: '#05375a',
   },
   button: {
-    alignItems: 'center',
+    // alignItems: 'center',
     marginTop: 50,
   },
   signIn: {
@@ -130,9 +132,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: '20%',
     width: '95%',
+    padding: 5,
   },
   searchBarTextInput: {
-    marginTop: 5,
+    // marginTop: 5,
     paddingHorizontal: 5,
     width: '100%',
     borderBottomColor: 'black',
@@ -141,12 +144,32 @@ const styles = StyleSheet.create({
   searchBarCard: {
     width: '95%',
     height: '20%',
-    padding: 5,
+    // padding: 5,
     backgroundColor: '#fff',
     marginBottom: 5,
     opacity: 0.85,
     borderRadius: 5,
     // marginHorizontal: 5,
+  },
+  detailsCard: {
+    width: '40%',
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    marginLeft: '55%',
+    marginRight: '5%',
+  },
+  detailsHeading: {
+    borderBottomWidth: 1, borderBottomColor: '#828282', marginHorizontal: 15, marginVertical: 10,
+  },
+  detailsBox: {
+    borderWidth: 1, borderRadius: 3, backgroundColor: '#828282', marginHorizontal: 20, opacity: 0.7,
+  },
+  detailsText: { fontWeight: 'bold', fontSize: 18, paddingHorizontal: 5 },
+  detailsValue: { fontSize: 15, paddingHorizontal: 5 },
+  addSkills: {
+    height: 30, borderRadius: 5, width: 200, borderColor: '#fff', borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
   },
 });
 

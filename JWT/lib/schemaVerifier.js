@@ -17,6 +17,7 @@ const schemaDefinations = {
   updateMe: {
     user: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
     userType: { type: 'string', maxLength: 8, regex: /^(labour|employer|admin)$/g },
+    username: { type: 'string', minLength: 0, maxLength: 50 },
     userSkills: { isArray: true, typeElement: 'string', maxLengthElement: 50 },
     userVillage: { type: 'string', maxLength: 50 },
     userCity: { type: 'string', maxLength: 50 },
@@ -83,20 +84,35 @@ function verifySchema(request, body) {
       for (let key = 0; key < bodyKeys.length; key += 1) {
         const bodyKey = body[bodyKeys[key]];
         const schemaKey = schema[bodyKeys[key]];
-        if (schemaKey.type && typeof bodyKey !== schemaKey.type) return false;
-        if (schemaKey.minLength && schemaKey.maxLength && (bodyKey.length < schemaKey.minLength || bodyKey.length > schemaKey.maxLength)) return false;
-        if (!schemaKey.minLength && schemaKey.maxLength && (bodyKey.length <= 0 || bodyKey.length > schemaKey.maxLength)) return false;
-        if (schemaKey.regex && bodyKey.search(schemaKey.regex) !== 0) return false;
-        if (schemaKey.isArray && !Array.isArray(bodyKey)) return false;
+        if (schemaKey.type && typeof bodyKey !== schemaKey.type) {
+          console.log(`type error in ${bodyKeys[key]}`);
+          return false;
+        }
+        if (schemaKey.minLength && schemaKey.maxLength && (bodyKey.length < schemaKey.minLength || bodyKey.length > schemaKey.maxLength)) {
+          console.log(`length error in ${bodyKeys[key]}`);
+          return false;
+        }
+        if (!schemaKey.minLength && schemaKey.maxLength && (bodyKey.length <= 0 || bodyKey.length > schemaKey.maxLength)) {
+          console.log(`length error in ${bodyKeys[key]}`);
+          return false;
+        }
+        if (schemaKey.regex && bodyKey.search(schemaKey.regex) !== 0) {
+          console.log(`regex error in ${bodyKeys[key]}`);
+          return false;
+        }
+        if (schemaKey.isArray && !Array.isArray(bodyKey)) {
+          console.log(`array error in ${bodyKeys[key]}`);
+          return false;
+        }
         if (schemaKey.typeElement) {
-          let validElement;
+          let validElement = true;
           bodyKey.forEach((val) => {
             if (validElement && typeof val !== schemaKey.typeElement) validElement = false;
           });
           if (!validElement) return false;
         }
         if (schemaKey.maxLengthElement) {
-          let validElement;
+          let validElement = true;
           bodyKey.forEach((val) => {
             if (validElement && (val.length <= 0 || val.length > schemaKey.maxLengthElement)) validElement = false;
           });

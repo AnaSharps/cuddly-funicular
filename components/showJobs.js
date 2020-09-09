@@ -9,6 +9,8 @@ import {
 import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
+import AuthContext from './AuthContext';
+
 const { host } = require('./host');
 
 export default class ShowJobs extends React.Component {
@@ -18,94 +20,19 @@ export default class ShowJobs extends React.Component {
       loading: true,
       vacanciesFound: [],
       vacanciesFoundNum: [],
+      error: null,
     };
-    this.applyForJob = this.applyForJob.bind(this);
+    
   }
+  static contextType = AuthContext;
 
   componentDidMount() {
-    const { route, navigation } = { ...this.props };
-    const { token, user } = route.params;
-    fetch(`${host}/users/viewJobsLabour`, {
-      method: 'POST',
-      headers: {
-        Authorization: token,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user,
-        userType: 'labour',
-      }),
-    }).then((res) => res.json()).then((json) => {
-      if (json.success) {
-        const vacancyNum = json.vacancyDetails.map(() => uuid.v4());
-        this.setState({ loading: false, vacanciesFoundNum: vacancyNum, vacanciesFound: json.vacancyDetails });
-      }
-    }, () => {
-      SecureStore.deleteItemAsync('authToken');
-      navigation.navigate('WelcomeLogin', { error: 'Unauthorized User' });
-    });
+    
   }
 
-  applyForJob(vacancyId) {
-    const { route, navigation } = { ...this.props };
-    const { token, user } = route.params;
-    fetch(`${host}/users/applyforJob`, {
-      method: 'POST',
-      headers: {
-        Authorization: token,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user,
-        vacancyId,
-      }),
-    }).then((res) => res.json()).then((json) => {
-      if (json.success) {
-        navigation.push('ShowJobs', {
-          user, token, error: null,
-        });
-      } else {
-        navigation.push('ShowJobs', {
-          user, token, error: json.msg,
-        });
-      }
-    }, () => {
-      SecureStore.deleteItemAsync('authToken');
-      navigation.navigate('WelcomeLogin', { error: 'Unauthorized User' });
-    });
-  }
+  
 
-  withdrawApplicationHandler(vacancyId) {
-    const { route, navigation } = { ...this.props };
-    const { token, user } = route.params;
-    fetch(`${host}/users/withdrawJob`, {
-      method: 'POST',
-      headers: {
-        Authorization: token,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user,
-        vacancyId,
-      }),
-    }).then((res) => res.json()).then((json) => {
-      if (json.success) {
-        navigation.push('ShowJobs', {
-          user, token, error: null,
-        });
-      } else {
-        navigation.push('ShowJobs', {
-          user, token, error: json.msg,
-        });
-      }
-    }, () => {
-      SecureStore.deleteItemAsync('authToken');
-      navigation.navigate('WelcomeLogin', { error: 'Unauthorized User' });
-    });
-  }
+  
 
   render() {
     const { route, navigation } = { ...this.props };
@@ -121,45 +48,7 @@ export default class ShowJobs extends React.Component {
         {loading && (
           <Text>Retrieving YOur Eligible Vacancies...</Text>
         )}
-        {!loading && vacanciesFound.map((val, ind) => {
-          const {
-            job_desc, vacancy, vac_name, village, city, state, skills, vac_id, applied,
-          } = val;
-          return (
-            <View key={vacanciesFoundNum[ind]}>
-              <Text>
-                {job_desc}
-                ,
-                {' '}
-                {vacancy}
-                ,
-                {' '}
-                {vac_name}
-                ,
-                {' '}
-                {village}
-                ,
-                {' '}
-                {city}
-                ,
-                {' '}
-                {state}
-                ,
-                {' '}
-                {skills.join(', ')}
-              </Text>
-              {applied && (
-                <>
-                  <Button title="Applied" disabled />
-                  <Button title="Withdraw Application" onPress={() => this.withdrawApplicationHandler(vac_id)} />
-                </>
-              )}
-              {!applied && (
-                <Button title="Apply" onPress={() => this.applyForJob(vac_id)} />
-              )}
-            </View>
-          );
-        })}
+        
       </ScreenContainer>
     );
   }

@@ -9,6 +9,7 @@ import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
 import AuthContext from './AuthContext';
+import * as Animatable from 'react-native-animatable';
 const { host } = require('./host');
 import styles from './cssStylesheet';
 
@@ -41,6 +42,7 @@ export default class EmployerLoggedIn extends React.Component {
     const {
       userSkills, userVillage, userCity, userState, vacancy, jobDesc, jobName,
     } = { ...this.state };
+    const { signOut, update } = this.context;
     fetch(`${host}/users/createVacancy`, {
       method: 'POST',
       headers: {
@@ -67,13 +69,13 @@ export default class EmployerLoggedIn extends React.Component {
           });
         }
       } else {
-        navigation.navigate('EmployerLoggedIn', {
-          user, userType, token, createVacancy: true, error: json.msg,
+        update({
+          token, userType, user, details: null, userDetails: null, skillList: null, error: json.msg, createVacancy: true,
         });
       }
     }, () => {
       SecureStore.deleteItemAsync('authToken');
-      navigation.navigate('WelcomeLogin', { error: 'Unauthorized User' });
+      signOut({ error: 'Unauthorized User' });
     });
   }
 
@@ -83,6 +85,7 @@ export default class EmployerLoggedIn extends React.Component {
       user, token, userType,
     } = route.params;
     const { searchInput, locationInput } = { ...this.state };
+    const { signOut, update } = this.context;
     this.setState({ searchHappened: 1 });
     fetch(`${host}/users/searchLabour`, {
       method: 'POST',
@@ -102,13 +105,13 @@ export default class EmployerLoggedIn extends React.Component {
         this.setState({ searchResults: json.results });
       } else {
         this.setState({ searchResults: [] });
-        navigation.navigate('EmployerLoggedIn', {
-          user, userType, token, createVacancy: true, error: json.msg,
+        update({
+          token, userType, user, details: null, userDetails: null, skillList: null, error: json.msg, createVacancy: null,
         });
       }
     }, () => {
       SecureStore.deleteItemAsync('authToken');
-      navigation.navigate('WelcomeLogin', { error: 'Unauthorized User' });
+      signOut({ error: 'Unauthorized' });
     });
   }
 
@@ -120,21 +123,33 @@ export default class EmployerLoggedIn extends React.Component {
     const {
       userVillage, userCity, userState, vacancy, jobDesc, jobName, userSkills, skillNum, searchResults, searchHappened,
     } = { ...this.state };
-    const { signOut } = this.context;
     return (
-      <ScreenContainer>
+      <ScreenContainer style={{
+        ...styles.container,
+        // justifyContent: 'center',
+        alignItems: 'center',
+      }}>
         {error && (
           <Text>{error}</Text>
         )}
-        <Text>You have successfully logged in!</Text>
-        <TextInput placeholder="Search skills" onChangeText={(e) => this.setState({ searchInput: e })} />
-        <TextInput placeholder="Search locations" onChangeText={(e) => this.setState({ locationInput: e })} />
-        <Button
-          title="Search"
-          onPress={() => {
-            this.searchHandler();
-          }}
-        />
+        <Animatable.View
+          animation="bounceIn"
+          duration={2000}
+          style={styles.searchBarContainer}
+        >
+          <View style={styles.searchBarCard}>
+            <TextInput style={styles.searchBarTextInput} placeholder="Search skills" onChangeText={(e) => this.setState({ searchInput: e })} />
+          </View>
+          <View style={styles.searchBarCard}>
+            <TextInput style={styles.searchBarTextInput} placeholder="Search locations" onChangeText={(e) => this.setState({ locationInput: e })} />
+          </View>
+          <Button
+            title="Search"
+            onPress={() => {
+              this.searchHandler();
+            }}
+          />
+        </Animatable.View>
         {searchHappened === 1 && (
           <Text>Retrieving Search Results...</Text>
         )}
@@ -215,13 +230,6 @@ export default class EmployerLoggedIn extends React.Component {
           <Button
             title="View Your Created Vacancies"
             onPress={() => navigation.navigate('ViewVacancies', { user, token })}
-          />
-          <Button
-            title="Logout"
-            onPress={() => {
-              SecureStore.deleteItemAsync('authToken');
-              signOut();
-            }}
           />
         </>
         )}

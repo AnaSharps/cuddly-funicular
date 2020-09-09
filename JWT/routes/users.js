@@ -84,18 +84,18 @@ module.exports = (dbConnection) => {
     if (verifySchema('applyforJob', req.body)) {
       dbConnection.query('SELECT applicant_email FROM vac_applications WHERE applicant_email = ? AND vac_id = ?', [req.body.user, req.body.vacancyId], (err1, applicant) => {
         if (err1) next(err1);
-        if (applicant.length > 0) res.status(200).json({ success: false, msg: 'You have already applied for this job' });
-        else {
+        if (applicant.length > 0) {
+          console.log('applied already');
+          return res.status(200).json({ success: false, msg: 'You have already applied for this job' });
+        }
+        if (applicant.length === 0) {
           dbConnection.query('SELECT vac_skills.skills FROM vac_skills JOIN lab_skills ON lab_skills.skills = vac_skills.skills WHERE vac_skills.vac_id = ?', [req.body.vacancyId], (err, vacSkills) => {
             console.log(req.body);
             if (err) next(err);
             if (vacSkills.length > 0) {
               const labDetailsQuery = query('SELECT village, city, state FROM lab_details WHERE user_email = ?', [req.body.user]);
               const labContactQuery = query('SELECT username, mobileNum FROM user_accounts WHERE user_email = ?', [req.body.user]);
-              Promise.all([labDetailsQuery, labContactQuery]).then((values) => {
-                console.log(values);
-                return ([{ ...values[0][0], ...values[1][0] }]);
-              }, (err2) => next(err2)).then((details) => {
+              const result = Promise.all([labDetailsQuery, labContactQuery]).then((values) => ([{ ...values[0][0], ...values[1][0] }]), (err2) => next(err2)).then((details) => {
                 console.log(details);
                 const address = `${details[0].village}, ${details[0].city}, ${details[0].state}`;
                 const skills = vacSkills.map((val) => val.skills).join(', ');
@@ -103,11 +103,13 @@ module.exports = (dbConnection) => {
                   if (err3) next(err3);
                   if (result) {
                     console.log('sending res for job applied');
-                    res.status(200).json({ success: true, msg: 'Applied successfully' });
+                    return true;
                   }
                 });
               });
-            } else res.status(200).json({ success: false, msg: 'You are not eligible for this job vacancy!' });
+              if (result === true) return res.status(200).json({ success: true, msg: 'Applied successfully' });
+            }
+            // else return res.status(200).json({ success: false, msg: 'You are not eligible for this job vacancy!' });
           });
         }
       });
@@ -141,9 +143,11 @@ module.exports = (dbConnection) => {
 
   router.post('/viewJobsLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     if (verifySchema('viewJobsLabour', req.body)) {
+      console.log('schema verified');
       dbConnection.query('SELECT DISTINCT vac_skills.vac_id FROM vac_skills JOIN lab_skills ON lab_skills.skills = vac_skills.skills WHERE lab_skills.user_email = ?', [req.body.user], (err2, vacancies) => {
         if (err2) next(err2);
         if (vacancies.length > 0) {
+          console.log('length > 0');
           const vacancyQueries = [];
           const sql2 = 'SELECT vac_details.job_desc, vac_details.vacancy, vac_details.vac_name, vac_details.village, vac_details.city, vac_details.state, vac_details.vac_id FROM vac_details JOIN lab_details ON lab_details.state = vac_details.state WHERE vac_details.vac_id = ?';
           for (let i = 0; i < vacancies.length; i += 1) {
@@ -171,7 +175,10 @@ module.exports = (dbConnection) => {
           });
         } else res.status(200).json({ success: false, msg: 'Sorry no matching jobs found!' });
       });
-    } res.status(401).json({ success: false, msg: 'Malformed Request' });
+    } else {
+      console.log('schema incorrect');
+      res.status(401).json({ success: false, msg: 'Malformed Request' });
+    }
   });
 
   router.post('/searchVacancy', passport.authenticate('jwt', { session: false }), (req, res, next) => {
@@ -337,46 +344,54 @@ module.exports = (dbConnection) => {
   router.post('/viewLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     if (verifySchema('viewLabour', req.body)) {
-      const sqlQuery1 = 'SELECT lab_skills.skills, lab_details.village, lab_details.city, lab_details.state FROM lab_skills JOIN lab_details ON lab_details.user_email = lab_skills.user_email WHERE lab_details.user_email = ?';
+      console.log('schema verified');
+      const sqlQuery1 = 'SELECT DISTINCT lab_skills.skills, lab_details.village, lab_details.city, lab_details.state, user_accounts.username FROM lab_skills JOIN lab_details ON lab_details.user_email = lab_skills.user_email JOIN user_accounts ON lab_skills.user_email = user_accounts.user_email WHERE lab_details.user_email = ?';
       dbConnection.query(sqlQuery1, [req.body.user], (err, users) => {
         if (err) next(err);
-        if (users) {
+        if (users[0]) {
           console.log(users);
           console.log(users[0].skills);
           return res.status(200).json({ success: true, users, msg: 'Thank you for your details!' });
-        }
+        } return res.status(200).json({ success: true, users: [], msg: 'Details not entered' });
       });
-    } else res.status(401).json({ success: false, msg: 'Malformed request' });
+    } else {
+      console.log('schema not verified');
+      res.status(401).json({ success: false, msg: 'Malformed request' });
+    }
   });
 
   router.post('/updateMe', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     console.log(req.headers);
     if (verifySchema('updateMe', req.body)) {
+      console.log('schema correct');
       if (req.body.updateInfo) {
+        console.log('update info true');
         dbConnection.query('UPDATE lab_details SET village = ?, city = ?, state = ? WHERE user_email = ?', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
           if (err) next(err);
           if (user) {
             dbConnection.query('DELETE FROM lab_skills WHERE user_email = ?', [req.body.user], (err2, user2) => {
               if (err2) next(err2);
-              if (user2) {
-                for (let i = 0; i < req.body.userSkills.length; i += 1) {
-                  dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
-                    if (error) next(error);
-                    if (User) {
-                      console.log(`${req.body.userSkills[i]} updated`);
-                    }
-                  });
-                }
-              }
+              // if (user2) {
+              // }
             });
+            for (let i = 0; i < req.body.userSkills.length; i += 1) {
+              dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
+                if (error) next(error);
+                if (User) {
+                  console.log(`${req.body.userSkills[i]} updated`);
+                }
+              });
+            }
             return res.status(200).json({ success: true, msg: 'Your details have been updated!' });
           }
         });
       } else {
+        console.log('update info false');
         dbConnection.query('INSERT INTO lab_details (village, city, state, user_email) VALUES (?, ?, ?, ?)', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
           if (err) next(err);
           if (user) {
+            console.log('insertion successful');
             dbConnection.query('UPDATE user_accounts SET details = ? WHERE user_email = ?', [req.body.details, req.body.user], (err2, user2) => {
               if (err2) next(err2);
               if (user2) {
@@ -390,11 +405,15 @@ module.exports = (dbConnection) => {
                 }
               }
             });
+            console.log('sending response');
             return res.status(200).json({ success: true, msg: 'Thank you for your details!' });
           }
         });
       }
-    } else return res.status(401).json({ success: false, msg: 'Malformed Request' });
+    } else {
+      console.log('schema updateMe incorrect');
+      return res.status(401).json({ success: false, msg: 'Malformed Request' });
+    }
   });
 
   router.post('/login', (req, res, next) => {
