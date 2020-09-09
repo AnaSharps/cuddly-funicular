@@ -13,6 +13,13 @@ module.exports = (dbConnection) => {
 
   router.use(express.json());
 
+  router.get('/test', (req, res) => {
+    console.log('Got testeinga req');
+    res.status(200).json({
+      good: 'Work',
+    });
+  });
+
   router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     if (verifySchema('viewApplications', req.body).success) {
