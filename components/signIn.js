@@ -91,6 +91,8 @@ export default class SignIn extends React.Component {
             error: json.msg,
           });
         }
+      }).catch((err) => {
+        throw err;
       });
     } else {
       navigation.navigate('SignIn', {
