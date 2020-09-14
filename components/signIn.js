@@ -7,6 +7,7 @@ import {
   Text, TextInput, View, TouchableOpacity, StatusBar,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import superagent from 'superagent';
 import { ScreenContainer } from 'react-native-screens';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Animatable from 'react-native-animatable';
@@ -28,6 +29,7 @@ export default class SignIn extends React.Component {
       secureTextEntry: true,
       errorPass: '',
       errorEmail: '',
+      error: null,
     };
   }
   static contextType = AuthContext;
@@ -71,6 +73,15 @@ export default class SignIn extends React.Component {
     const { email, password } = { ...this.state };
     const { signIn } = this.context;
     if (verifySchema('login', { email, password })) {
+      // fetch('www.google.com').then((res) => res.text()).then((res) => { throw new Error('google'); });
+      // fetch('https://srivalab-compute.cse.iitk.ac.in:3200/users/test', {
+      //   headers: {
+      //     Accept: 'application/json',
+      //     'Content-Type': 'application/json',
+      //   },
+      //   mode: 'cors',
+      // }).then((res) => res.json()).catch((err) => { throw err; });
+      // superagent.get('https://srivalab-compute.cse.iitk.ac.in:3200/users/test').then((res) => res.text).catch((err) => {throw err;});
       fetch(`${host}/users/login`, {
         method: 'POST',
         headers: {
@@ -87,9 +98,7 @@ export default class SignIn extends React.Component {
           SecureStore.setItemAsync('authToken', authToken);
           signIn({ token: json.token, userType: json.userType, user: json.user, details: json.details });
         } else {
-          navigation.push('SignIn', {
-            error: json.msg,
-          });
+          this.setState({ error: json.msg });
         }
       }).catch((err) => {
         throw err;
@@ -103,8 +112,8 @@ export default class SignIn extends React.Component {
 
   render() {
     const { route, navigation } = { ...this.props };
-    const { error } = route.params;
-    const { checkTextInput, secureTextEntry, errorEmail, errorPass } = { ...this.state };
+    // const { error } = route.params;
+    const { checkTextInput, secureTextEntry, errorEmail, errorPass, error } = { ...this.state };
     return (
       <ScreenContainer style={styles.container}>
         <StatusBar backgroundColor="#009387" barStyle="light-content" />

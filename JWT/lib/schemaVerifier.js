@@ -11,7 +11,7 @@ const schemaDefinations = {
     email: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
     mobile: { type: 'string', maxLength: 10, regex: /^([1-9]{1}[0-9]{9})$/g },
     password: { type: 'string', maxLength: 12 },
-    userType: { type: 'string', maxLength: 8, regex: /^(labour|employer|admin)$/g },
+    userType: { type: 'string', maxLength: 8, regex: /^(labour|employer)$/g },
     details: { type: 'number', regex: /^(0|1)$/g },
   },
   updateMe: {
@@ -19,9 +19,11 @@ const schemaDefinations = {
     userType: { type: 'string', maxLength: 8, regex: /^(labour|employer|admin)$/g },
     username: { type: 'string', minLength: 0, maxLength: 50 },
     userSkills: { isArray: true, typeElement: 'string', maxLengthElement: 50 },
-    userVillage: { type: 'string', maxLength: 50 },
+    userVillage: { type: 'string', minLength: 0, maxLength: 50 },
     userCity: { type: 'string', maxLength: 50 },
     userState: { type: 'string', maxLength: 100 },
+    mobile: { type: 'string', maxLength: 10, regex: /^([1-9]{1}[0-9]{9})$/g },
+    company: { type: 'string', minLength: 0, maxLength: 100 },
     details: { type: 'number', regex: /^(0|1)$/g },
     updateInfo: { type: 'boolean' },
   },
@@ -69,6 +71,34 @@ const schemaDefinations = {
   },
   viewVacancies: {
     user: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    userType: { type: 'string', maxLength: 8, regex: /^(employer|admin)$/g },
+  },
+  viewLaboursList: {
+    user: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    userType: { type: 'string', maxLength: 8, regex: /^(admin)$/g },
+  },
+  viewEmployersList: {
+    user: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    userType: { type: 'string', maxLength: 8, regex: /^(admin)$/g },
+  },
+  viewAdminList: {
+    user: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    userType: { type: 'string', maxLength: 8, regex: /^(admin)$/g },
+  },
+  removeMember: {
+    user: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    removeMemberId: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    userType: { type: 'string', maxLength: 8, regex: /^(labour|employer|admin)$/g },
+  },
+  addMember: {
+    user: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    userType: { type: 'string', maxLength: 5, regex: /^(admin)$/g },
+    usernameM: { type: 'string', maxLength: 50 },
+    emailM: { type: 'string', maxLength: 50, regex: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g },
+    mobileM: { type: 'string', maxLength: 10, regex: /^([1-9]{1}[0-9]{9})$/g },
+    passwordM: { type: 'string', maxLength: 12 },
+    userTypeM: { type: 'string', maxLength: 8, regex: /^(labour|employer|admin)$/g },
+    details: { type: 'number', regex: /^(0|1)$/g },
   },
 };
 

@@ -22,31 +22,41 @@ module.exports = (dbConnection) => {
 
   router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
-    if (verifySchema('viewApplications', req.body).success) {
+    if (verifySchema('viewApplications', req.body)) {
       dbConnection.query('SELECT DISTINCT vac_id FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacId) => {
         if (err) next(err);
         if (vacId.length > 0) {
           console.log('vacancies found');
-          console.log(vacId[0]);
-          const valid = () => {
-            for (let i = 0; i < vacId.length; i += 1) {
-              if (vacId[i].vac_id === req.body.vacancyId) return true;
+          console.log(vacId);
+          let valid = false;
+          for (let i = 0; i < vacId.length; i += 1) {
+            if (vacId[i].vac_id === req.body.vacancyId) {
+              valid = true;
+              break;
             }
-            return false;
-          };
+          }
           if (valid) {
             console.log('vacancy valid');
             dbConnection.query('SELECT * FROM vac_applications WHERE vac_id = ?', [req.body.vacancyId], (err2, applications) => {
               if (err2) next(err2);
-              if (applications) {
+              if (applications.length >= 0) {
                 console.log(applications);
-                res.status(200).json({ success: true, applications, msg: 'Successfully retrieved the applications' });
+                return (res.status(200).json({ success: true, applications, msg: 'Successfully retrieved the applications' }));
               }
             });
-          } else res.status(200).json({ success: false, msg: 'Unauthorized Request' });
-        } else res.status(200).json({ success: false, msg: 'No vacancies found' });
+          } else {
+            console.log('not valid')
+            return (res.status(200).json({ success: false, msg: 'Unauthorized Request' }));
+          }
+        } else {
+          console.log('no vacancy found');
+          return (res.status(200).json({ success: false, msg: 'No vacancies found' }));
+        }
       });
-    } return res.status(401).json({ success: false, msg: 'Malformed Request' });
+    } else {
+      console.log('malformed');
+      return (res.status(401).json({ success: false, msg: 'Malformed Request' }));
+    }
   });
 
   // router.post('/viewApplications', passport.authenticate('jwt', { session: false }), (req, res, next) => {
@@ -138,14 +148,15 @@ module.exports = (dbConnection) => {
   });
 
   router.post('/viewVacancies', passport.authenticate('jwt', { session: false }), (req, res, next) => {
-    if (req.body.user && req.body.userType === 'employer') {
-      dbConnection.query('SELECT DISTINCT vac_id, vac_name FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacancies) => {
+    if (verifySchema('viewVacancies', req.body)) {
+      dbConnection.query('SELECT DISTINCT * FROM vac_details WHERE user_email = ?', [req.body.user], (err, vacancies) => {
         if (err) next(err);
         if (vacancies.length > 0) {
+          console.log(vacancies);
           res.status(200).json({ success: true, vacancies, msg: 'Vacancies found' });
         } else res.status(200).json({ success: false, msg: 'You have no current vacancy' });
       });
-    } res.status(401).json({ success: false, msg: 'Malformed Request' });
+    } else res.status(401).json({ success: false, msg: 'Malformed Request' });
   });
 
   router.post('/viewJobsLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
@@ -156,7 +167,7 @@ module.exports = (dbConnection) => {
         if (vacancies.length > 0) {
           console.log('length > 0');
           const vacancyQueries = [];
-          const sql2 = 'SELECT vac_details.job_desc, vac_details.vacancy, vac_details.vac_name, vac_details.village, vac_details.city, vac_details.state, vac_details.vac_id FROM vac_details JOIN lab_details ON lab_details.state = vac_details.state WHERE vac_details.vac_id = ?';
+          const sql2 = 'SELECT vac_details.job_desc, vac_details.vacancy, vac_details.vac_name, vac_details.village, vac_details.city, vac_details.state, vac_details.vac_id FROM vac_details WHERE vac_details.vac_id = ?';
           for (let i = 0; i < vacancies.length; i += 1) {
             const vacDetailQuery = query(sql2, [vacancies[i].vac_id]);
             const vacSkillQuery = query('SELECT DISTINCT skills FROM vac_skills WHERE vac_id = ?', [vacancies[i].vac_id]);
@@ -220,7 +231,7 @@ module.exports = (dbConnection) => {
       } else if (req.body.company && !req.body.skills && !req.body.location) {
         const compArr = req.body.company.split(', ');
         compArr.forEach((compVal) => {
-          const insertQuery = query('INSERT INTO search_lab (searchId, company, user_email) VALUES (?, ?, ?, ?, ?)', [sId, compVal, req.body.user]);
+          const insertQuery = query('INSERT INTO search_lab (searchId, company, user_email) VALUES (?, ?, ?)', [sId, compVal, req.body.user]);
           insertQueries.push(insertQuery);
         });
       } else if (req.body.skills && req.body.location && !req.body.company) {
@@ -258,7 +269,8 @@ module.exports = (dbConnection) => {
       dbConnection.query(sql, [sId], (err, vacancies) => {
         console.log(sql);
         if (err) next(err);
-        if (vacancies.length > 0) {
+        if (vacancies && vacancies.length > 0) {
+          console.log('length > 0');
           const vacancyQueries = [];
           const sql2 = 'SELECT job_desc, vacancy, vac_name, village, city, state, vac_id, user_email FROM vac_details WHERE vac_id = ?';
           for (let i = 0; i < vacancies.length; i += 1) {
@@ -348,22 +360,139 @@ module.exports = (dbConnection) => {
     });
   });
 
+  router.post('/viewLaboursList', passport.authenticate('jwt', { session: false }), (req, res, next) => {
+    console.log(req.body);
+    if (verifySchema('viewLaboursList', req.body)) {
+      console.log('schema verified');
+      dbConnection.query('SELECT username, user_email, mobileNum, details FROM user_accounts WHERE userType = ?', ['labour'], (err, users) => {
+        if (err) next(err);
+        if (users && users.length > 0) {
+          console.log(users);
+          return res.status(200).json({ success: true, users, msg: 'Found Labourers' });
+        } else {
+          console.log('no laborers found');
+          return res.status(200).json({ success: false, msg: 'No labourers have registered yet' });
+        }
+      });
+    } else {
+      console.log('schema not verified');
+      return res.status(401).json({ success: false, msg: 'Malformed request' });
+    }
+  });
+
+  router.post('/viewEmployersList', passport.authenticate('jwt', { session: false }), (req, res, next) => {
+    console.log(req.body);
+    if (verifySchema('viewEmployersList', req.body)) {
+      console.log('schema verified');
+      dbConnection.query('SELECT user_accounts.username, user_accounts.user_email, user_accounts.mobileNum, user_accounts.details, emp_details.village, emp_details.city, emp_details.state FROM user_accounts LEFT JOIN emp_details ON user_accounts.user_email = emp_details.user_email WHERE user_accounts.userType = ?', ['employer'], (err, users) => {
+        if (err) next(err);
+        if (users && users.length > 0) {
+          console.log(users);
+          return res.status(200).json({ success: true, users, msg: 'Found Employers' });
+        } else {
+          console.log('no employers found');
+          return res.status(200).json({ success: false, msg: 'No employers have registered yet' });
+        }
+      });
+    } else {
+      console.log('schema not verified');
+      return res.status(401).json({ success: false, msg: 'Malformed request' });
+    }
+  });
+
+  router.post('/viewAdminList', passport.authenticate('jwt', { session: false }), (req, res, next) => {
+    console.log(req.body);
+    if (verifySchema('viewAdminList', req.body)) {
+      console.log('schema verified');
+      dbConnection.query('SELECT username, user_email, mobileNum FROM user_accounts WHERE userType = ?', ['admin'], (err, users) => {
+        if (err) next(err);
+        if (users && users.length > 0) {
+          console.log(users);
+          return res.status(200).json({ success: true, users, msg: 'Found Admins' });
+        } else {
+          console.log('no admins found');
+          return res.status(200).json({ success: false, msg: 'No admins have registered yet' });
+        }
+      });
+    } else {
+      console.log('schema not verified');
+      return res.status(401).json({ success: false, msg: 'Malformed request' });
+    }
+  });
+
+  router.post('/removeMember', passport.authenticate('jwt', { session: false }), (req, res, next) => {
+    console.log(req.body);
+    if (verifySchema('removeMember', req.body)) {
+      let sql1;
+      dbConnection.query('SELECT userType FROM user_accounts WHERE user_email = ?', [req.body.user], (err, user) => {
+        if (err) next(err);
+        if (user && user.length > 0 && user[0].userType === 'admin') {
+          dbConnection.query('SELECT userType FROM user_accounts WHERE user_email = ?', [req.body.removeMemberId], (err2, user2) => {
+            if (err2) next(err2);
+            if (user2 && user2.length > 0 && user2[0].userType === req.body.userType) {
+              switch (user2[0].userType) {
+                case 'labour':
+                  sql1 = 'DELETE user_accounts, lab_details, lab_skills, vac_applications FROM user_accounts LEFT JOIN lab_details ON user_accounts.user_email = lab_details.user_email LEFT JOIN lab_skills ON user_accounts.user_email = lab_skills.user_email LEFT JOIN vac_applications ON user_accounts.user_email = vac_applications.applicant_email WHERE user_accounts.user_email = ?';
+                  break;
+                case 'employer':
+                  sql1 = 'DELETE user_accounts, emp_details, vac_details, vac_skills, vac_applications FROM user_accounts LEFT JOIN emp_details ON user_accounts.user_email = emp_details.user_email LEFT JOIN vac_details ON user_accounts.user_email = vac_details.user_email LEFT JOIN vac_skills ON vac_details.vac_id = vac_skills.vac_id LEFT JOIN vac_applications ON vac_details.vac_id = vac_applications.vac_id WHERE user_accounts.user_email = ?';
+                  break;
+                case 'admin':
+                  sql1 = 'DELETE FROM user_accounts WHERE user_email = ?';
+                  break;
+                default:
+                  //
+              }
+              dbConnection.query(sql1, [req.body.removeMemberId], (err3, response) => {
+                if (err3) next(err3);
+                if (response) {
+                  console.log('Deleted successfully');
+                  return res.status(200).json({ success: true, msg: 'Successfully deleted member' });
+                }
+              });
+            } else {
+              console.log('Invalid Request');
+              return res.status(200).json({ success: false, msg: 'Invalid Request' });
+            }
+          });
+        } else {
+          console.log('Unauthorized Request');
+          return res.status(200).json({ success: false, msg: 'Unauthorized Request' });
+        }
+      });
+    } else {
+      console.log('schema not verified');
+      return res.status(401).json({ success: false, msg: 'Malformed request' });
+    }
+  });
+
   router.post('/viewLabour', passport.authenticate('jwt', { session: false }), (req, res, next) => {
     console.log(req.body);
     if (verifySchema('viewLabour', req.body)) {
       console.log('schema verified');
-      const sqlQuery1 = 'SELECT DISTINCT lab_skills.skills, lab_details.village, lab_details.city, lab_details.state, user_accounts.username FROM lab_skills JOIN lab_details ON lab_details.user_email = lab_skills.user_email JOIN user_accounts ON lab_skills.user_email = user_accounts.user_email WHERE lab_details.user_email = ?';
-      dbConnection.query(sqlQuery1, [req.body.user], (err, users) => {
-        if (err) next(err);
-        if (users[0]) {
-          console.log(users);
-          console.log(users[0].skills);
-          return res.status(200).json({ success: true, users, msg: 'Thank you for your details!' });
-        } return res.status(200).json({ success: true, users: [], msg: 'Details not entered' });
-      });
+      if (req.body.userType === 'labour' || req.body.userType === 'admin') {
+        const sqlQuery1 = 'SELECT DISTINCT lab_skills.skills, lab_details.village, lab_details.city, lab_details.state, user_accounts.username, user_accounts.mobileNum FROM lab_skills JOIN lab_details ON lab_details.user_email = lab_skills.user_email JOIN user_accounts ON lab_skills.user_email = user_accounts.user_email WHERE lab_details.user_email = ?';
+        dbConnection.query(sqlQuery1, [req.body.user], (err, users) => {
+          if (err) next(err);
+          if (users[0]) {
+            console.log(users);
+            console.log(users[0].skills);
+            return res.status(200).json({ success: true, users, msg: 'Thank you for your details!' });
+          } return res.status(200).json({ success: true, users: [], msg: 'Details not entered' });
+        });
+      } else if (req.body.userType === 'employer' || req.body.userType === 'admin') {
+        const sqlQuery1 = 'SELECT DISTINCT emp_details.village, emp_details.city, emp_details.state, emp_details.company, user_accounts.username, user_accounts.mobileNum FROM emp_details JOIN user_accounts ON emp_details.user_email = user_accounts.user_email WHERE emp_details.user_email = ?';
+        dbConnection.query(sqlQuery1, [req.body.user], (err, users) => {
+          if (err) next(err);
+          if (users && users.length > 0) {
+            console.log(users);
+            return res.status(200).json({ success: true, users, msg: 'Thank you for your details!' });
+          } return res.status(200).json({ success: true, users: [], msg: 'Details not entered' });
+        });
+      }
     } else {
       console.log('schema not verified');
-      res.status(401).json({ success: false, msg: 'Malformed request' });
+      return res.status(401).json({ success: false, msg: 'Malformed request' });
     }
   });
 
@@ -372,50 +501,85 @@ module.exports = (dbConnection) => {
     console.log(req.headers);
     if (verifySchema('updateMe', req.body)) {
       console.log('schema correct');
-      if (req.body.updateInfo) {
-        console.log('update info true');
-        dbConnection.query('UPDATE lab_details SET village = ?, city = ?, state = ? WHERE user_email = ?', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
-          if (err) next(err);
-          if (user) {
-            dbConnection.query('DELETE FROM lab_skills WHERE user_email = ?', [req.body.user], (err2, user2) => {
-              if (err2) next(err2);
-              // if (user2) {
-              // }
-            });
-            for (let i = 0; i < req.body.userSkills.length; i += 1) {
-              dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
-                if (error) next(error);
-                if (User) {
-                  console.log(`${req.body.userSkills[i]} updated`);
+      if (req.body.userType === 'labour' || req.body.userType === 'admin') {
+        if (req.body.updateInfo) {
+          console.log('update info true');
+          dbConnection.query('UPDATE lab_details SET village = ?, city = ?, state = ? WHERE user_email = ?', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
+            if (err) next(err);
+            if (user) {
+              dbConnection.query('UPDATE user_accounts SET mobileNum = ? WHERE user_email = ?', [req.body.mobile, req.body.user], (err3, user3) => {
+                if (err3) next(err3);
+              });
+              dbConnection.query('DELETE FROM lab_skills WHERE user_email = ?', [req.body.user], (err2, user2) => {
+                if (err2) next(err2);
+                // if (user2) {
+                // }
+              });
+              for (let i = 0; i < req.body.userSkills.length; i += 1) {
+                dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
+                  if (error) next(error);
+                  if (User) {
+                    console.log(`${req.body.userSkills[i]} updated`);
+                  }
+                });
+              }
+              return res.status(200).json({ success: true, msg: 'Your details have been updated!' });
+            }
+          });
+        } else {
+          console.log('update info false');
+          dbConnection.query('INSERT INTO lab_details (village, city, state, user_email) VALUES (?, ?, ?, ?)', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
+            if (err) next(err);
+            if (user) {
+              console.log('insertion successful');
+              dbConnection.query('UPDATE user_accounts SET details = ? WHERE user_email = ?', [req.body.details, req.body.user], (err2, user2) => {
+                if (err2) next(err2);
+                if (user2) {
+                  for (let i = 0; i < req.body.userSkills.length; i += 1) {
+                    dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
+                      if (error) next(error);
+                      if (User) {
+                        console.log(`${req.body.userSkills[i]} added`);
+                      }
+                    });
+                  }
+                }
+              });
+              console.log('sending response');
+              return res.status(200).json({ success: true, msg: 'Thank you for your details!' });
+            }
+          });
+        }
+      } else if (req.body.userType === 'employer' || req.body.userType === 'admin') {
+        if (req.body.updateInfo) {
+          console.log('update employer info true');
+          dbConnection.query('UPDATE emp_details SET village = ?, city = ?, state = ?, company = ? WHERE user_email = ?', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.company, req.body.user], (err, user) => {
+            if (err) next(err);
+            if (user) {
+              dbConnection.query('UPDATE user_accounts SET mobileNum = ? WHERE user_email = ?', [req.body.mobile, req.body.user], (err2, user2) => {
+                if (err2) next(err2);
+                if (user2) {
+                  return res.status(200).json({ success: true, msg: 'Your details have been updated!' });
                 }
               });
             }
-            return res.status(200).json({ success: true, msg: 'Your details have been updated!' });
-          }
-        });
-      } else {
-        console.log('update info false');
-        dbConnection.query('INSERT INTO lab_details (village, city, state, user_email) VALUES (?, ?, ?, ?)', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
-          if (err) next(err);
-          if (user) {
-            console.log('insertion successful');
-            dbConnection.query('UPDATE user_accounts SET details = ? WHERE user_email = ?', [req.body.details, req.body.user], (err2, user2) => {
-              if (err2) next(err2);
-              if (user2) {
-                for (let i = 0; i < req.body.userSkills.length; i += 1) {
-                  dbConnection.query('INSERT INTO lab_skills (skills, user_email) VALUES (?, ?)', [req.body.userSkills[i], req.body.user], (error, User) => {
-                    if (error) next(error);
-                    if (User) {
-                      console.log(`${req.body.userSkills[i]} added`);
-                    }
-                  });
+          });
+        } else {
+          console.log('update info false');
+          dbConnection.query('INSERT INTO emp_details (village, city, state, user_email) VALUES (?, ?, ?, ?)', [req.body.userVillage, req.body.userCity, req.body.userState, req.body.user], (err, user) => {
+            if (err) next(err);
+            if (user) {
+              console.log('insertion successful');
+              dbConnection.query('UPDATE user_accounts SET details = ? WHERE user_email = ?', [req.body.details, req.body.user], (err2, user2) => {
+                if (err2) next(err2);
+                if (user2) {
+                  console.log('sending response');
+                  return res.status(200).json({ success: true, msg: 'Thank you for your details!' });
                 }
-              }
-            });
-            console.log('sending response');
-            return res.status(200).json({ success: true, msg: 'Thank you for your details!' });
-          }
-        });
+              });
+            }
+          });
+        }
       }
     } else {
       console.log('schema updateMe incorrect');
@@ -431,12 +595,10 @@ module.exports = (dbConnection) => {
         if (err) {
           console.log('error in query');
           next(err);
-        }
-        if (!user[0]) {
+        } else if (!user || user.length <= 0) {
           console.log('user not found');
-          res.status(401).json({ success: false, msg: 'could not find user' });
-        }
-        if (user[0]) {
+          return res.status(200).json({ success: false, msg: 'could not find user' });
+        } else if (user && user.length > 0) {
           console.log('user found');
           utils.validPassword(req.body.password, user[0].hash).then((isValid) => {
             console.log('password checked');
@@ -444,18 +606,18 @@ module.exports = (dbConnection) => {
               console.log('password is valid');
               const tokenObject = utils.issueJWT(user[0]);
               console.log('sending res');
-              res.status(200).json({
+              return res.status(200).json({
                 success: true, user: user[0].user_email, userType: user[0].userType, details: user[0].details, token: tokenObject.token, expiresIn: tokenObject.expires,
               });
             } else {
               console.log('password not valid');
-              res.status(401).json({ success: false, msg: 'you entered the wrong password' });
+              return res.status(401).json({ success: false, msg: 'you entered the wrong password' });
             }
           }, () => {
           });
         }
       });
-    } else res.status(401).json({ success: false, msg: 'Malformed Request!' });
+    } else return res.status(401).json({ success: false, msg: 'Malformed Request!' });
   });
 
   // TODO
@@ -484,5 +646,42 @@ module.exports = (dbConnection) => {
       });
     } else res.status(401).json({ success: false, msg: 'Malformed Request!' });
   });
+
+  router.post('/addMember', (req, res, next) => {
+    console.log(req.body);
+    if (verifySchema('addMember', req.body)) {
+      console.log('authorized request');
+      dbConnection.query('SELECT userType FROM user_accounts WHERE user_email = ?', [req.body.user], (er, userType) => {
+        if (er) next(er);
+        if (userType && userType.length > 0 && userType[0].userType === 'admin') {
+          console.log('valid request');
+          dbConnection.query(`SELECT user_email, username FROM user_accounts WHERE ( user_email='${req.body.emailM}' OR mobileNum='${req.body.mobileM}')`, (err, user) => {
+            console.log(user);
+            if (user[0]) return res.json({ success: false, msg: 'User already Exists!', user: user[0].usernameM });
+            utils.genPassword(req.body.passwordM).then((hash) => {
+              console.log(hash);
+              dbConnection.query('INSERT INTO user_accounts (username, hash, userType, mobileNum, details, user_email) VALUES (?, ?, ?, ?, ?, ?)', [req.body.usernameM, hash, req.body.userTypeM, req.body.mobileM, req.body.details, req.body.emailM], (error, User) => {
+                console.log(req.body);
+                console.log(req.body.userTypeM);
+                if (error) {
+                  console.log('error encountered!');
+                  next(error);
+                } else if (User) {
+                  console.log('sending res');
+                  return res.json({
+                    success: true,
+                  });
+                } else console.log('nothing here!');
+              });
+            }, () => console.log('error generating password'));
+          });
+        } else return res.status(200).json({ success: false, msg: 'Unauthorized Request' });
+      });
+    } else {
+      console.log('schema incorrect');
+      return res.status(401).json({ success: false, msg: 'Malformed Request!' });
+    }
+  });
+
   return router;
 };

@@ -171,6 +171,14 @@ const styles = StyleSheet.create({
   addSkills: {
     height: 30, borderRadius: 5, width: 200, borderColor: '#fff', borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
   },
+  vacancyCard: {
+    width: '95%',
+    backgroundColor: '#fff',
+    marginBottom: 5,
+    opacity: 0.85,
+    borderRadius: 5,
+    marginVertical: 10,
+  },
 });
 
 export default styles;

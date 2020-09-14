@@ -3,8 +3,9 @@
 /* eslint-disable linebreak-style */
 import React from 'react';
 import {
-  TextInput, Button, Text, Linking, View,
+  TextInput, Button, Text, Linking, View, TouchableOpacity
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
 import uuid from 'react-native-uuid';
@@ -12,38 +13,24 @@ import AuthContext from './AuthContext';
 import * as Animatable from 'react-native-animatable';
 const { host } = require('./host');
 import styles from './cssStylesheet';
+import { ScrollView } from 'react-native-gesture-handler';
 
 export default class EmployerLoggedIn extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      userVillage: '',
-      userCity: '',
-      useState: '',
-      vacancy: 1,
-      jobDesc: '',
-      jobName: '',
-      userSkills: [''],
-      skillNum: [uuid.v4()],
-      searchInput: '',
-      locationInput: '',
-      searchResults: [],
-      searchHappened: 0,
+      loading: true,
+      errorState: null,
+      vacancyNameList: null,
     };
-    this.createVacancyHandler = this.createVacancyHandler.bind(this);
   }
   static contextType = AuthContext;
 
-  createVacancyHandler() {
+  componentDidMount() {
     const { route, navigation } = { ...this.props };
-    const {
-      user, userType, token,
-    } = route.params;
-    const {
-      userSkills, userVillage, userCity, userState, vacancy, jobDesc, jobName,
-    } = { ...this.state };
-    const { signOut, update } = this.context;
-    fetch(`${host}/users/createVacancy`, {
+    const { user, token } = route.params;
+    const { signOut } = this.context;
+    fetch(`${host}/users/viewVacancies`, {
       method: 'POST',
       headers: {
         Authorization: token,
@@ -52,26 +39,25 @@ export default class EmployerLoggedIn extends React.Component {
       },
       body: JSON.stringify({
         user,
-        userType,
-        userSkills,
-        userVillage,
-        userCity,
-        userState,
-        vacancy,
-        jobDesc,
-        jobName,
+        userType: 'employer',
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {
-        if (userType === 'employer') {
-          navigation.navigate('ViewVacancies', {
-            user, userType, details: null, token, createVacancy: false,
+        this.setState({ loading: false, vacancyNameList: json.vacancies });
+      } else {
+        const authToken = SecureStore.getItemAsync('authToken');
+        if (authToken) {
+          authToken.then((res) => {
+            const resObject = JSON.parse(res);
+            if (resObject && resObject.userType === 'admin') {
+              navigation.navigate('EmployerLoggedIn', {
+                ...route.params, error: json.msg,
+              });
+            } else {
+              this.setState({ errorState: json.msg });
+            } 
           });
         }
-      } else {
-        update({
-          token, userType, user, details: null, userDetails: null, skillList: null, error: json.msg, createVacancy: true,
-        });
       }
     }, () => {
       SecureStore.deleteItemAsync('authToken');
@@ -79,50 +65,10 @@ export default class EmployerLoggedIn extends React.Component {
     });
   }
 
-  searchHandler() {
-    const { route, navigation } = { ...this.props };
-    const {
-      user, token, userType,
-    } = route.params;
-    const { searchInput, locationInput } = { ...this.state };
-    const { signOut, update } = this.context;
-    this.setState({ searchHappened: 1 });
-    fetch(`${host}/users/searchLabour`, {
-      method: 'POST',
-      headers: {
-        Authorization: token,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user,
-        skills: searchInput,
-        location: locationInput,
-      }),
-    }).then((res) => res.json()).then((json) => {
-      this.setState({ searchHappened: 2 });
-      if (json.success) {
-        this.setState({ searchResults: json.results });
-      } else {
-        this.setState({ searchResults: [] });
-        update({
-          token, userType, user, details: null, userDetails: null, skillList: null, error: json.msg, createVacancy: null,
-        });
-      }
-    }, () => {
-      SecureStore.deleteItemAsync('authToken');
-      signOut({ error: 'Unauthorized' });
-    });
-  }
-
   render() {
     const { route, navigation } = { ...this.props };
-    const {
-      user, userType, token, createVacancy, error,
-    } = route.params;
-    const {
-      userVillage, userCity, userState, vacancy, jobDesc, jobName, userSkills, skillNum, searchResults, searchHappened,
-    } = { ...this.state };
+    const { user, token, error } = route.params;
+    const { loading, vacancyNameList, errorState } = { ...this.state };
     return (
       <ScreenContainer style={{
         ...styles.container,
@@ -130,109 +76,72 @@ export default class EmployerLoggedIn extends React.Component {
         alignItems: 'center',
       }}>
         {error && (
-          <Text>{error}</Text>
-        )}
-        <Animatable.View
-          animation="bounceIn"
-          duration={2000}
-          style={styles.searchBarContainer}
-        >
-          <View style={styles.searchBarCard}>
-            <TextInput style={styles.searchBarTextInput} placeholder="Search skills" onChangeText={(e) => this.setState({ searchInput: e })} />
+          <View style={{ margin: 20 }}>
+            <Text>{error}</Text>
           </View>
-          <View style={styles.searchBarCard}>
-            <TextInput style={styles.searchBarTextInput} placeholder="Search locations" onChangeText={(e) => this.setState({ locationInput: e })} />
+        )}
+        {errorState && (
+          <View style={{ margin: 20 }}>
+            <Text>{errorState}</Text>
           </View>
-          <Button
-            title="Search"
-            onPress={() => {
-              this.searchHandler();
-            }}
-          />
-        </Animatable.View>
-        {searchHappened === 1 && (
-          <Text>Retrieving Search Results...</Text>
         )}
-        {searchHappened === 2 && !searchResults[0] && (
-          <Text>No matching candidates found</Text>
+        {!error && !errorState && loading && (
+          <Text>
+            Retrieving Vacancies
+            ...
+          </Text>
         )}
-        {searchHappened === 2 && searchResults[0] && searchResults.map((val) => {
+        <ScrollView>
+        {!loading && vacancyNameList.map((val) => {
           const {
-            username, user_email, village, city, state, mobileNum, skills,
+            job_desc, vacancy, vac_name, village, city, state,
           } = val;
           return (
-            <View key={user_email}>
-              <Text>
-                {username}
-                ,
-                {' '}
-                {mobileNum}
-                ,
-                {' '}
-                {user_email}
-                ,
-                {` ${village}, ${city}, ${state}`}
-                ,
-                {' '}
-                {skills.join(', ')}
-              </Text>
-              <Button
-                title="Send Email"
-                onPress={() => {
-                  Linking.openURL(`mailto:${user_email}`);
-                }}
-              />
-              <Button
-                title="Call"
-                onPress={() => {
-                  Linking.openURL(`tel:${mobileNum}`);
-                }}
-              />
+            <View key={vac_name} style={styles.vacancyCard}>
+              <View style={{ borderBottomWidth: 1, marginVertical: 5, marginHorizontal: 10 }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 22, opacity: 0.8, paddingHorizontal: 20 }}>{vac_name}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 18, opacity: 0.8, paddingHorizontal: 15 }}>Description: </Text>
+                <Text style={{ fontWeight: '200', fontSize: 15, paddingHorizontal: 5 }}>{job_desc}</Text>
+              </View>
+              {/* <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 18, opacity: 0.8, paddingHorizontal: 15 }}>Skills Required: </Text>
+                <Text style={{ fontWeight: '200', fontSize: 15, paddingHorizontal: 5 }}>{skills.join(', ')}</Text>
+              </View> */}
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 18, opacity: 0.8, paddingHorizontal: 15 }}>No. of Vacancies: </Text>
+                <Text style={{ fontWeight: '200', fontSize: 15, paddingHorizontal: 5 }}>{vacancy}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 18, opacity: 0.8, paddingHorizontal: 15 }}>Location: </Text>
+                <Text style={{ fontWeight: '200', fontSize: 15, paddingHorizontal: 5 }}>{village}, {city}, {state}</Text>
+              </View>
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('ViewApplicants', {
+                    user, token, vacancyId: val.vac_id,
+                  })}
+                  styles={{ ...styles.button }}
+                >
+                  <LinearGradient
+                    colors={['#08d4c4', '#01ab9d']}
+                    style={{ height: 30, borderRadius: 5, width: 150, borderColor: '#fff', borderWidth: 1, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text>View Applicants</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+              {/* <Button
+                title="View Applicants"
+                onPress={() => navigation.navigate('ViewApplicants', {
+                  user, token, vacancyId: val.vac_id,
+                })}
+              /> */}
             </View>
           );
         })}
-        {!searchHappened && createVacancy && (
-        <>
-          <Text>Please Enter the Vacancy details:</Text>
-          <TextInput placeholder="Job Name" defaultValue={jobName} onChangeText={(e) => this.setState({ jobName: e })} />
-          <TextInput placeholder="Job Description" defaultValue={jobDesc} onChangeText={(e) => this.setState({ jobDesc: e })} />
-          <TextInput placeholder="Number of Vacancies" defaultValue={vacancy} keyboardType="numeric" onChangeText={(e) => this.setState({ vacancy: e })} />
-          <TextInput placeholder="Village" defaultValue={userVillage} onChangeText={(e) => this.setState({ userVillage: e })} />
-          <TextInput placeholder="City" defaultValue={userCity} onChangeText={(e) => this.setState({ userCity: e })} />
-          <TextInput placeholder="State" defaultValue={userState} onChangeText={(e) => this.setState({ userState: e })} />
-          {skillNum.map((val, ind) => (
-            <TextInput
-              placeholder="Enter Skill Required"
-              defaultValue={userSkills[ind]}
-              onChangeText={(e) => {
-                const newSkills = [...userSkills];
-                newSkills[ind] = e;
-                this.setState({ userSkills: newSkills });
-              }}
-              key={val}
-            />
-          ))}
-          <Button title="Add another Skill" onPress={() => this.setState({ userSkills: [...userSkills, ''], skillNum: [...skillNum, uuid.v4()] })} />
-          <Button
-            title="Confirm Details"
-            onPress={this.createVacancyHandler}
-          />
-        </>
-        )}
-        {!searchHappened && !createVacancy && (
-        <>
-          <Button
-            title="Create Vacancy"
-            onPress={() => navigation.navigate('EmployerLoggedIn', {
-              user, userType, token, createVacancy: true, error: null,
-            })}
-          />
-          <Button
-            title="View Your Created Vacancies"
-            onPress={() => navigation.navigate('ViewVacancies', { user, token })}
-          />
-        </>
-        )}
+        </ScrollView>
       </ScreenContainer>
     );
   }

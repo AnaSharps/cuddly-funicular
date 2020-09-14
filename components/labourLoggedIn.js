@@ -12,7 +12,7 @@ import * as Animatable from 'react-native-animatable';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import styles from './cssStylesheet';
 import AuthContext from './AuthContext';
-import { ScrollView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
 const { host } = require('./host');
 
 export default class LabourLoggedIn extends React.Component {
@@ -103,13 +103,37 @@ export default class LabourLoggedIn extends React.Component {
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {
-        navigation.push('Home', {
-          user, token, error: null,
-        });
+        const authToken = SecureStore.getItemAsync('authToken');
+        if (authToken) {
+          authToken.then((res) => {
+            const resObject = JSON.parse(res);
+            if (resObject && resObject.userType === 'admin') {
+              navigation.push('LabourLoggedIn', {
+                ...route.params, error: null,
+              });
+            } else {
+              navigation.push('Home', {
+                user, token, error: null,
+              });
+            } 
+          });
+        }
       } else {
-        navigation.push('Home', {
-          user, token, error: json.msg,
-        });
+        const authToken = SecureStore.getItemAsync('authToken');
+        if (authToken) {
+          authToken.then((res) => {
+            const resObject = JSON.parse(res);
+            if (resObject && resObject.userType === 'admin') {
+              navigation.push('LabourLoggedIn', {
+                ...route.params, error: json.msg,
+              });
+            } else {
+              navigation.push('Home', {
+                user, token, error: json.msg,
+              });
+            } 
+          });
+        }
       }
     }, () => {
       SecureStore.deleteItemAsync('authToken');
@@ -134,13 +158,37 @@ export default class LabourLoggedIn extends React.Component {
       }),
     }).then((res) => res.json()).then((json) => {
       if (json.success) {
-        navigation.push('Home', {
-          user, token, error: null,
-        });
+        const authToken = SecureStore.getItemAsync('authToken');
+        if (authToken) {
+          authToken.then((res) => {
+            const resObject = JSON.parse(res);
+            if (resObject && resObject.userType === 'admin') {
+              navigation.push('LabourLoggedIn', {
+                ...route.params, error: null,
+              });
+            } else {
+              navigation.push('Home', {
+                user, token, error: null,
+              });
+            } 
+          });
+        }
       } else {
-        navigation.push('Home', {
-          user, token, error: json.msg,
-        });
+        const authToken = SecureStore.getItemAsync('authToken');
+        if (authToken) {
+          authToken.then((res) => {
+            const resObject = JSON.parse(res);
+            if (resObject && resObject.userType === 'admin') {
+              navigation.push('LabourLoggedIn', {
+                ...route.params, error: json.msg,
+              });
+            } else {
+              navigation.push('Home', {
+                user, token, error: json.msg,
+              });
+            } 
+          });
+        }
       }
     }, () => {
       SecureStore.deleteItemAsync('authToken');
@@ -179,15 +227,15 @@ export default class LabourLoggedIn extends React.Component {
         {!loading && vacanciesFoundNum && vacanciesFound && vacanciesFound.map((val, ind) => {
           const {
             job_desc, vacancy, vac_name, village, city, state, skills, vac_id, applied,
-          } = val;
+          } = { ...val };
           return (
-            <View key={vacanciesFoundNum[ind]} style={{ ...styles.searchBarCard, marginVertical: 10, height: '30%' }}>
+            <View key={vacanciesFoundNum[ind]} style={styles.vacancyCard}>
               <View style={{ borderBottomWidth: 1, marginVertical: 5, marginHorizontal: 10 }}>
                 <Text style={{ fontWeight: 'bold', fontSize: 22, opacity: 0.8, paddingHorizontal: 20 }}>{vac_name}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
                 <Text style={{ fontWeight: 'bold', fontSize: 18, opacity: 0.8, paddingHorizontal: 15 }}>Description: </Text>
-                <Text style={{ fontWeight: '200', fontSize: 15, paddingHorizontal: 5 }}>{vac_name}</Text>
+                <Text style={{ fontWeight: '200', fontSize: 15, paddingHorizontal: 5 }}>{job_desc}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
                 <Text style={{ fontWeight: 'bold', fontSize: 18, opacity: 0.8, paddingHorizontal: 15 }}>Skills Required: </Text>
@@ -201,15 +249,35 @@ export default class LabourLoggedIn extends React.Component {
                 <Text style={{ fontWeight: 'bold', fontSize: 18, opacity: 0.8, paddingHorizontal: 15 }}>Location: </Text>
                 <Text style={{ fontWeight: '200', fontSize: 15, paddingHorizontal: 5 }}>{village}, {city}, {state}</Text>
               </View>
-              {applied && (
-                <>
-                  <Button title="Applied" disabled />
-                  <Button title="Withdraw Application" onPress={() => this.withdrawApplicationHandler(vac_id)} />
-                </>
+                <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <TouchableOpacity
+                    disabled={applied ? true : false}
+                    onPress={() => {
+                      !applied ? this.applyForJob(vac_id) : null;
+                    }}
+                    styles={{ ...styles.button }}
+                  >
+                    <LinearGradient
+                      colors={applied ? ['#999999', '#777777'] : ['#08d4c4', '#01ab9d']}
+                      style={{ height: 30, borderRadius: 5, width: 150, borderColor: '#fff', borderWidth: 1, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Text>{applied ? 'Applied' : 'Apply'}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  {applied && (
+                  <TouchableOpacity
+                    onPress={() => this.withdrawApplicationHandler(vac_id)}
+                    styles={{ ...styles.button }}
+                  >
+                    <LinearGradient
+                      colors={['#08d4c4', '#01ab9d']}
+                      style={{ height: 30, borderRadius: 5, width: 150, borderColor: '#fff', borderWidth: 1, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Text>Withdraw Application</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
               )}
-              {!applied && (
-                <Button title="Apply" onPress={() => this.applyForJob(vac_id)} />
-              )}
+              </View>
             </View>
           );
         })}

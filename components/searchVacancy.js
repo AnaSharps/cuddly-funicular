@@ -50,9 +50,6 @@ export default class SearchVacancies extends React.Component {
         this.setState({ searchResults: json.results });
       } else {
         this.setState({ searchResults: [] });
-        navigation.push('Search', {
-          user, userType, token, error: json.msg,
-        });
       }
     }, () => {
       SecureStore.deleteItemAsync('authToken');

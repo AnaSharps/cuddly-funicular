@@ -3,7 +3,7 @@
 /* eslint-disable react/jsx-filename-extension */
 import React from 'react';
 import {
-  TextInput, Text, View, TouchableOpacity, StatusBar,
+  TextInput, Text, View, TouchableOpacity, StatusBar, Alert,
 } from 'react-native';
 import { ScreenContainer } from 'react-native-screens';
 import * as SecureStore from 'expo-secure-store';
@@ -19,15 +19,15 @@ const { host } = require('./host');
 
 const { verifySchema } = require('../JWT/lib/schemaVerifier');
 
-export default class Register extends React.Component {
+export default class AddMember extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      username: '',
-      password: '',
-      mobile: 0,
-      userType: 'labour',
-      email: '',
+      usernameM: '',
+      passwordM: '',
+      mobileM: 0,
+      userTypeM: 'labour',
+      emailM: '',
       checkTextInputUsername: false,
       checkTextInputEmail: false,
       checkTextInputMobile: false,
@@ -36,39 +36,41 @@ export default class Register extends React.Component {
       confirmPass: '',
       checkPass: false,
       secureTextEntry: true,
+      error: null,
     };
     this.radioProps = [
       { label: 'Labour', value: 0 },
       { label: 'Employer', value: 1 },
+      { label: 'Admin', value: 2 },
     ];
   }
   static contextType = AuthContext;
 
   textInputChange({
-    username, email, mobile, confirmPass, passwordInp,
+    usernameM, emailM, mobileM, confirmPass, passwordInp,
   }) {
-    const { password } = { ...this.state };
-    if (username) {
-      if (username.length <= 0) this.setState({ username, checkTextInputUsername: false });
-      else this.setState({ username, checkTextInputUsername: true });
+    const { passwordM } = { ...this.state };
+    if (usernameM) {
+      if (usernameM.length <= 0) this.setState({ usernameM, checkTextInputUsername: false });
+      else this.setState({ usernameM, checkTextInputUsername: true });
     }
-    if (email) {
-      if (email.length <= 0) this.setState({ email, checkTextInputEmail: false });
-      else if (email.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) !== 0) this.setState({ email, checkTextInputEmail: false });
-      else this.setState({ email, checkTextInputEmail: true });
+    if (emailM) {
+      if (emailM.length <= 0) this.setState({ emailM, checkTextInputEmail: false });
+      else if (emailM.search(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g) !== 0) this.setState({ emailM, checkTextInputEmail: false });
+      else this.setState({ emailM, checkTextInputEmail: true });
     }
-    if (mobile) {
-      if (mobile.length <= 0 || mobile.length < 10 || mobile.search(/^([1-9]{1}[0-9]{9})$/g) !== 0) this.setState({ mobile, checkTextInputMobile: false });
-      else this.setState({ mobile, checkTextInputMobile: true });
+    if (mobileM) {
+      if (mobileM.length <= 0 || mobileM.length < 10 || mobileM.search(/^([1-9]{1}[0-9]{9})$/g) !== 0) this.setState({ mobileM, checkTextInputMobile: false });
+      else this.setState({ mobileM, checkTextInputMobile: true });
     }
     if (passwordInp) {
-      if (passwordInp.length <= 0) this.setState({ password: passwordInp, checkPass: false });
-      else this.setState({ password: passwordInp, checkPass: true });
+      if (passwordInp.length <= 0) this.setState({ passwordM: passwordInp, checkPass: false });
+      else this.setState({ passwordM: passwordInp, checkPass: true });
     }
     if (confirmPass) {
       if (confirmPass.length <= 0) this.setState({ passwordMatch: false });
-      else if (confirmPass !== password) this.setState({ confirmPass, passwordMatch: false });
-      else if (confirmPass === password) this.setState({ confirmPass, passwordMatch: true });
+      else if (confirmPass !== passwordM) this.setState({ confirmPass, passwordMatch: false });
+      else if (confirmPass === passwordM) this.setState({ confirmPass, passwordMatch: true });
     }
   }
 
@@ -157,61 +159,88 @@ export default class Register extends React.Component {
   // }
 
   registrationHandler() {
-    const { navigation } = { ...this.props };
+    const { route, navigation } = { ...this.props };
+    const { user, userType } = route.params;
     const {
-      username, password, mobile, userType, email, passwordMatch,
+      usernameM, passwordM, mobileM, userTypeM, emailM, passwordMatch,
     } = { ...this.state };
-    const { signIn } = this.context;
-    if (verifySchema('register', {
-      username,
-      email,
-      mobile,
-      password,
+    const { signOut } = this.context;
+    if (verifySchema('addMember', {
+      user,
       userType,
+      usernameM,
+      emailM,
+      mobileM,
+      passwordM,
+      userTypeM,
       details: 0,
     }) && passwordMatch) {
-      fetch(`${host}/users/register`, {
+      fetch(`${host}/users/addMember`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username,
-          email,
-          mobile,
-          password,
+          user,
           userType,
+          usernameM,
+          emailM,
+          mobileM,
+          passwordM,
+          userTypeM,
           details: 0,
         }),
       }).then((res) => res.json()).then((json) => {
         if (json.success) {
-          const authToken = JSON.stringify(json);
-          SecureStore.setItemAsync('authToken', authToken);
-          signIn({ token: json.token, userType: json.userType, user: json.user, details: json.details });
+          Alert.alert(
+            "Member added",
+            `${usernameM} added as a ${userTypeM}!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.navigate('Home', {
+                    ...route.params,
+                  });
+                },
+              },
+              {
+                text: 'Add another member',
+                onPress: () => {
+                  navigation.navigate('AddMember', {
+                    ...route.params,
+                  });
+                },
+              },
+            ],
+            { cancelable: false },
+          );
         } else if (json.msg === 'User already Exists!') {
-          navigation.navigate('WelcomeLogin', { error: `Login as ${json.user}!` });
-        } else navigation.navigate('Register', { error: json.msg });
+          this.setState({ error: `User already exists with Email ID ${emailM}`})
+        } else navigation.navigate('AddMember', {
+          errorParams: json.msg,
+        })
+      }, () => {
+        SecureStore.deleteItemAsync('authToken');
+        signOut({ error: 'Unauthorized User' });
       });
     } else {
-      navigation.navigate('Register', {
-        error: 'Invalid Registration request',
+      navigation.navigate('AddMember', {
+        errorParams: 'Malformed params request',
       });
     }
   }
 
   render() {
     const { route, navigation } = { ...this.props };
-    const { error } = route.params;
+    const { errorParams } = route.params;
     const {
-      username, email, password, mobile, checkTextInputUsername, checkTextInputEmail, checkTextInputMobile, secureTextEntry, passwordMatch, checkPass, confirmPass,
+      usernameM, emailM, passwordM, mobileM, checkTextInputUsername, checkTextInputEmail, checkTextInputMobile, secureTextEntry, passwordMatch, checkPass, confirmPass, error,
     } = { ...this.state };
     return (
       <ScreenContainer style={styles.container}>
         <StatusBar backgroundColor="#009387" barStyle="light-content" />
-        <View style={styles.header}>
-          <Text style={styles.text_header}>Welcome!</Text>
-        </View>
         <Animatable.View
           animation="fadeInUpBig"
           style={styles.signUpFooter}
@@ -224,6 +253,14 @@ export default class Register extends React.Component {
               <Text style={styles.text_footer}>{error}</Text>
             </Animatable.View>
           ) : null}
+          {errorParams ? (
+            <Animatable.View
+              animation="bounceIn"
+              duration={2000}
+            >
+              <Text style={styles.text_footer}>{errorParams}</Text>
+            </Animatable.View>
+          ) : null}
           <Text style={styles.text_footer}>Name</Text>
           <View style={styles.action}>
             <FontAwesome
@@ -232,12 +269,12 @@ export default class Register extends React.Component {
               size={20}
             />
             <TextInput
-              placeholder="Enter your Name"
+              placeholder="Enter Name"
               style={styles.textInput}
-              defaultValue={username}
-              onChangeText={(e) => this.textInputChange({ username: e })}
+              defaultValue={usernameM}
+              onChangeText={(e) => this.textInputChange({ usernameM: e })}
             />
-            {username.length > 0 && (checkTextInputUsername
+            {usernameM.length > 0 && (checkTextInputUsername
               ? (
                 <Animatable.View>
                   <Feather
@@ -257,9 +294,7 @@ export default class Register extends React.Component {
                 </Animatable.View>
               ))}
           </View>
-          <Text style={[styles.text_footer,
-            { marginTop: 10 }]}
-          >
+          <Text style={{ ...styles.text_footer, marginTop: 10 }}>
             Email
           </Text>
           <View style={styles.action}>
@@ -272,10 +307,10 @@ export default class Register extends React.Component {
               placeholder="Enter Email"
               style={styles.textInput}
               keyboardType="email-address"
-              defaultValue={email}
-              onChangeText={(e) => this.textInputChange({ email: e })}
+              defaultValue={emailM}
+              onChangeText={(e) => this.textInputChange({ emailM: e })}
             />
-            {email.length > 0 && (checkTextInputEmail
+            {emailM.length > 0 && (checkTextInputEmail
               ? (
                 <Animatable.View>
                   <Feather
@@ -307,14 +342,14 @@ export default class Register extends React.Component {
               size={20}
             />
             <TextInput
-              placeholder="Enter your mobile number"
+              placeholder="Enter mobile number"
               style={styles.textInput}
               keyboardType="phone-pad"
               maxLength={10}
               // defaultValue={mobile}
-              onChangeText={(e) => this.textInputChange({ mobile: e })}
+              onChangeText={(e) => this.textInputChange({ mobileM: e })}
             />
-            {mobile.length > 0 && (checkTextInputMobile
+            {mobileM.length > 0 && (checkTextInputMobile
               ? (
                 <Animatable.View>
                   <Feather
@@ -355,7 +390,7 @@ export default class Register extends React.Component {
             <TouchableOpacity
               onPress={() => this.setState({ secureTextEntry: !secureTextEntry })}
             >
-              {password.length > 0 && (secureTextEntry ? (
+              {passwordM.length > 0 && (secureTextEntry ? (
                 <Feather
                   name="eye-off"
                   color="grey"
@@ -390,7 +425,7 @@ export default class Register extends React.Component {
               secureTextEntry={secureTextEntry}
               onChangeText={(e) => this.textInputChange({ confirmPass: e })}
             />
-            {password.length > 0 && password.length <= 12 && (passwordMatch
+            {passwordM.length > 0 && passwordM.length <= 12 && (passwordMatch
               ? (
                 <Animatable.View>
                   <Feather
@@ -415,8 +450,9 @@ export default class Register extends React.Component {
             initial={0}
             animation
             onPress={(value) => {
-              if (value === 0) this.setState({ userType: 'labour' });
-              else if (value === 1) this.setState({ userType: 'employer' });
+              if (value === 0) this.setState({ userTypeM: 'labour' });
+              else if (value === 1) this.setState({ userTypeM: 'employer' });
+              else if (value === 2) this.setState({ userTypeM: 'admin' });
             }}
           />
           <View>
@@ -424,13 +460,13 @@ export default class Register extends React.Component {
               style={styles.button}
               onPress={() => {
                 this.textInputChange({
-                  username, email, mobile, passwordInp: password, confirmPass,
+                  usernameM, emailM, mobileM, passwordInp: passwordM, confirmPass,
                 });
                 if (checkTextInputUsername && checkTextInputEmail && checkTextInputMobile && checkPass && passwordMatch) {
                   this.registrationHandler();
                 } else {
-                  navigation.navigate('Register', {
-                    error: 'Invalid credentials',
+                  navigation.push('AddMember', {
+                    ...route.params, errorParams: 'Invalid credentials',
                   });
                 }
               }}
@@ -440,7 +476,7 @@ export default class Register extends React.Component {
                 style={styles.signIn}
               >
                 <Text style={{ ...styles.textSign, color: '#fff' }}>
-                  Sign Up
+                  Add Member
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
